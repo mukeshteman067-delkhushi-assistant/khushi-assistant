@@ -16,18 +16,18 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. Layout Styling
+# 2. Styling (50-50 Split Layout)
 st.markdown("""
 <style>
     .block-container {
-        padding-top: 0.4rem;
-        padding-bottom: 0.4rem;
+        padding-top: 0.3rem;
+        padding-bottom: 0.3rem;
         max-width: 100%;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Base64 Image Ingestion
+# 3. Base64 Original Image Ingestion
 def get_image_base64():
     if os.path.exists("khushi.jpg"):
         try:
@@ -57,8 +57,8 @@ SYSTEM_PERSONA = f"""
 तुम 'Khushi' हो - एक अत्यंत बुद्धिमान, हमदर्द, सच्ची दोस्त और मल्टी-टैलेंटेड डिजिटल साथी।
 वर्तमान समय (IST): {current_now}
 1. हमेशा आदर, विनम्रता, स्वाभाविक अपनेपन और सकारात्मक ऊर्जा के साथ बात करो।
-2. जब समय पूछा जाए तो सटीक वर्तमान समय बताओ।
-3. शेयर मार्केट, विज्ञान, वैदिक ज्ञान, गणित और कोडिंग के सटीक उत्तर दो।
+2. जब समय पूछा जाए तो ऊपर दिए गए सटीक वर्तमान समय को स्वाभाविक रूप से बताओ।
+3. शेयर मार्केट (चार्ट्स, सपोर्ट/रेजिस्टेंस, इंडिकेटर्स), विज्ञान, वैदिक ज्ञान, गणित और कोडिंग के सटीक उत्तर दो।
 4. जवाब स्वाभाविक और बोलचाल की स्पष्ट हिंदी में दो।
 """
 
@@ -90,108 +90,153 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: 3D/4D Live Realistic Video Avatar (Syntax-Safe Render Engine)
+# 5. Top 50%: 3D/4D Cinematic Avatar Video Container (Clean & Proportionate)
 avatar_template = """
-<div style="width:100%; height:320px; background:radial-gradient(circle, #1a1a2e, #0a0a12); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.7); position:relative; overflow:hidden;">
-    <div id="videoContainer" style="position:relative; width:92%; height:250px; border-radius:14px; overflow:hidden; border:2px solid #ff4b4b; box-shadow:0 0 20px rgba(255,75,75,0.4); background:#12121e;">
-        <canvas id="faceCanvas" width="340" height="250" style="width:100%; height:100%; object-fit:cover; display:block;"></canvas>
+<div style="width:100%; height:325px; background:radial-gradient(circle, #181828, #0a0a12); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.7); position:relative; overflow:hidden;">
+    <div id="videoCard" class="card-box">
+        <div id="avatarFrame" class="img-frame">
+            <img id="avatarImage" src="REPLACE_IMAGE_BASE64" class="natural-img" />
+            <div id="lipAura" class="lip-aura"></div>
+        </div>
+        <div id="waveOverlay" class="wave-box">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
     </div>
-    <div id="liveBadge" style="margin-top:8px; background:rgba(0, 255, 128, 0.15); color:#00ff80; padding:4px 16px; border-radius:15px; font-size:12px; font-weight:bold; font-family:sans-serif;">
+    <div id="liveBadge" class="badge-status">
         🟢 Khushi Live | 4D वीडियो अवतार सक्रिय
     </div>
 </div>
 
-<script>
-    const canvas = document.getElementById('faceCanvas');
-    const ctx = canvas.getContext('2d');
-    const container = document.getElementById('videoContainer');
-    const badge = document.getElementById('liveBadge');
-
-    let baseImg = new Image();
-    baseImg.src = "REPLACE_IMAGE_BASE64";
-
-    let isSpeaking = false;
-    let mouthPhase = 0;
-    let blinkPhase = 0;
-    let lastBlink = Date.now();
-
-    function render4DAvatar() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        const time = Date.now() / 800;
-        const breathY = Math.sin(time) * 1.5;
-        const tilt = isSpeaking ? Math.sin(Date.now() / 250) * 1.2 : Math.sin(time * 0.5) * 0.5;
-
-        ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(tilt * Math.PI / 180);
-        ctx.drawImage(baseImg, -canvas.width / 2, -canvas.height / 2 + breathY, canvas.width, canvas.height);
-
-        const mouthX = canvas.width * 0.505;
-        const mouthY = canvas.height * 0.635 + breathY;
-        const leftEyeX = canvas.width * 0.405;
-        const rightEyeX = canvas.width * 0.605;
-        const eyeY = canvas.height * 0.405 + breathY;
-
-        // Realistic Eye Blinking (Every 3.5s)
-        const now = Date.now();
-        if (now - lastBlink > 3500) {
-            blinkPhase = 1;
-            if (now - lastBlink > 3700) {
-                blinkPhase = 0;
-                lastBlink = now;
-            }
-        }
-
-        if (blinkPhase === 1) {
-            ctx.fillStyle = "rgba(180, 130, 110, 0.95)";
-            ctx.beginPath();
-            ctx.ellipse(leftEyeX - canvas.width / 2, eyeY - canvas.height / 2, 12, 5, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(rightEyeX - canvas.width / 2, eyeY - canvas.height / 2, 12, 5, 0, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // Realistic Mouth/Lip Movement
-        if (isSpeaking) {
-            mouthPhase = (Math.sin(Date.now() / 80) + 1) / 2;
-            const openHeight = 1.5 + (mouthPhase * 5.5);
-            const openWidth = 10 + (mouthPhase * 3);
-
-            ctx.fillStyle = "rgba(45, 12, 15, 0.92)";
-            ctx.beginPath();
-            ctx.ellipse(mouthX - canvas.width / 2, mouthY - canvas.height / 2, openWidth, openHeight, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = "rgba(195, 80, 85, 0.85)";
-            ctx.lineWidth = 1.8;
-            ctx.stroke();
-
-            ctx.fillStyle = "rgba(220, 110, 115, 0.4)";
-            ctx.beginPath();
-            ctx.ellipse(mouthX - canvas.width / 2, mouthY - canvas.height / 2 + openHeight * 0.8, openWidth * 0.8, 2, 0, 0, Math.PI);
-            ctx.fill();
-        }
-
-        ctx.restore();
-        requestAnimationFrame(render4DAvatar);
+<style>
+    .card-box {
+        position: relative;
+        width: 88%;
+        height: 255px;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 2.5px solid #ff4b4b;
+        box-shadow: 0 0 22px rgba(255,75,75,0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #10101a;
+        transition: all 0.3s ease;
     }
+    .img-frame {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: subtleBreathe 4s infinite ease-in-out;
+        transform-origin: center center;
+    }
+    .natural-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 20%;
+        transition: transform 0.3s ease;
+    }
+    @keyframes subtleBreathe {
+        0% { transform: scale(1.0); }
+        50% { transform: scale(1.018) translateY(-1px); }
+        100% { transform: scale(1.0); }
+    }
+    .speaking-card {
+        border-color: #00ff80 !important;
+        box-shadow: 0 0 35px rgba(0, 255, 128, 0.65) !important;
+    }
+    .speaking-active .natural-img {
+        animation: speakingMotion 0.35s infinite alternate ease-in-out;
+    }
+    @keyframes speakingMotion {
+        0% { transform: scale(1.01) translateY(0px); }
+        100% { transform: scale(1.03) translateY(-1.5px); }
+    }
+    .lip-aura {
+        position: absolute;
+        top: 62%;
+        left: 50%;
+        width: 45px;
+        height: 20px;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 120, 140, 0.25) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .speaking-active .lip-aura {
+        opacity: 1;
+        animation: lipPulse 0.2s infinite alternate;
+    }
+    @keyframes lipPulse {
+        0% { transform: translate(-50%, -50%) scale(0.9); }
+        100% { transform: translate(-50%, -50%) scale(1.3); }
+    }
+    .wave-box {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 38px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.85));
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 5px;
+        padding-bottom: 5px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .wave-box .bar {
+        width: 4px;
+        height: 8px;
+        background: #00ff80;
+        border-radius: 2px;
+    }
+    @keyframes waveMotion {
+        0% { height: 6px; }
+        50% { height: 26px; }
+        100% { height: 6px; }
+    }
+    .speaking-wave { opacity: 1 !important; }
+    .speaking-wave .bar:nth-child(1) { animation: waveMotion 0.6s infinite ease-in-out; }
+    .speaking-wave .bar:nth-child(2) { animation: waveMotion 0.4s infinite ease-in-out 0.1s; }
+    .speaking-wave .bar:nth-child(3) { animation: waveMotion 0.7s infinite ease-in-out 0.2s; }
+    .speaking-wave .bar:nth-child(4) { animation: waveMotion 0.5s infinite ease-in-out 0.15s; }
+    .speaking-wave .bar:nth-child(5) { animation: waveMotion 0.6s infinite ease-in-out 0.25s; }
+    .speaking-wave .bar:nth-child(6) { animation: waveMotion 0.45s infinite ease-in-out 0.05s; }
+    .badge-status {
+        margin-top: 8px;
+        background: rgba(0, 255, 128, 0.15);
+        color: #00ff80;
+        padding: 4px 16px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: bold;
+        font-family: sans-serif;
+    }
+</style>
 
-    baseImg.onload = () => {
-        render4DAvatar();
-    };
+<script>
+    const card = document.getElementById('videoCard');
+    const frame = document.getElementById('avatarFrame');
+    const badge = document.getElementById('liveBadge');
+    const wave = document.getElementById('waveOverlay');
 
     window.addEventListener('message', (event) => {
         if (event.data.type === 'START_SPEAKING') {
-            isSpeaking = true;
-            container.style.borderColor = '#00ff80';
-            container.style.boxShadow = '0 0 35px rgba(0,255,128,0.7)';
+            card.classList.add('speaking-card');
+            frame.classList.add('speaking-active');
+            wave.classList.add('speaking-wave');
             badge.innerText = '🗣️ Khushi बोल रही है... (4D Live Sync)';
         } else if (event.data.type === 'STOP_SPEAKING') {
-            isSpeaking = false;
-            container.style.borderColor = '#ff4b4b';
-            container.style.boxShadow = '0 0 20px rgba(255,75,75,0.4)';
+            card.classList.remove('speaking-card');
+            frame.classList.remove('speaking-active');
+            wave.classList.remove('speaking-wave');
             badge.innerText = '🟢 Khushi Live | स्टैंडबाय';
         }
     });
@@ -199,7 +244,7 @@ avatar_template = """
 """
 
 final_avatar_html = avatar_template.replace("REPLACE_IMAGE_BASE64", khushi_b64)
-st.components.v1.html(final_avatar_html, height=330)
+st.components.v1.html(final_avatar_html, height=335)
 
 # Voice Dispatcher
 def speak_and_animate(text):
@@ -239,7 +284,7 @@ def speak_and_animate(text):
     """
     st.components.v1.html(js_code, height=0)
 
-# 6. Auto Mic & Speaker Engine
+# 6. Auto Mic & Speaker Unlock Button
 st.components.v1.html("""
 <div style="text-align:center; padding: 2px;">
     <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:12px 28px; border-radius:25px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 14px rgba(255,75,75,0.4);">
@@ -304,7 +349,7 @@ st.components.v1.html("""
 </script>
 """, height=75)
 
-# 7. Bottom 50%: Workspace
+# 7. Bottom 50%: Multi-Talented Workspace
 tab_vision, tab_tools, tab_memory = st.tabs(["📷 लाइव विज़न व चार्ट", "📐 टूल्स व आर्ट", "🧠 मेमोरी"])
 
 with tab_vision:
@@ -325,17 +370,25 @@ with tab_memory:
         save_memory([])
         st.rerun()
 
+# Display Recent Chat
 for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-def analyze_input(prompt, image):
+# Robust Multi-Model Engine (Text + Vision Aware)
+def execute_gemini_query(prompt, image_file):
     models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash']
-    default_vision_prompt = "इस तस्वीर का ध्यानपूर्वक विश्लेषण करें। यदि यह शेयर मार्केट का चार्ट है तो सपोर्ट, रेजिस्टेंस और ट्रेंड बताएं। यदि यह दस्तावेज़ या वस्तु है तो इसका विवरण दें।"
-    final_prompt = prompt if prompt else default_vision_prompt
+    
+    if image_file is not None:
+        try:
+            img = Image.open(image_file)
+            payload = [prompt if prompt else "इस तस्वीर का सटीक विश्लेषण करें।", img]
+        except Exception:
+            payload = prompt
+    else:
+        payload = prompt
 
-    payload = [final_prompt, Image.open(image)] if image else final_prompt
-
+    last_error = None
     for m in models:
         try:
             res = client.models.generate_content(
@@ -345,14 +398,17 @@ def analyze_input(prompt, image):
                     system_instruction=SYSTEM_PERSONA
                 )
             )
-            return res.text
-        except Exception:
+            if res and res.text:
+                return res.text
+        except Exception as e:
+            last_error = e
             continue
-    return "माफ़ कीजिए, मैं अभी जवाब नहीं दे पा रही हूँ।"
+    raise last_error
 
+# Process Prompt
 user_prompt = st.chat_input("यहाँ लिखें या माइक से बोलें...")
 
-if user_prompt or (active_image and st.button("🔍 इस इमेज का तुरंत विश्लेषण करें")):
+if user_prompt or (active_image is not None and st.button("🔍 इस इमेज का तुरंत विश्लेषण करें")):
     query = user_prompt if user_prompt else "कृपया इस तस्वीर का विश्लेषण करके मुझे बताएं।"
     
     st.session_state.messages.append({"role": "user", "content": query})
@@ -361,11 +417,14 @@ if user_prompt or (active_image and st.button("🔍 इस इमेज का �
 
     with st.chat_message("assistant"):
         if not client:
-            st.error("API Key उपलब्ध नहीं है।")
+            st.error("API Key उपलब्ध नहीं है। कृपया Streamlit Secrets जाँचें।")
         else:
-            with st.spinner("Khushi विश्लेषण कर रही है... 🔍"):
-                ans = analyze_input(user_prompt, active_image)
-                st.write(ans)
-                st.session_state.messages.append({"role": "assistant", "content": ans})
-                save_memory(st.session_state.messages)
-                speak_and_animate(ans)
+            with st.spinner("Khushi सोच रही है... ✨"):
+                try:
+                    ans = execute_gemini_query(query, active_image)
+                    st.write(ans)
+                    st.session_state.messages.append({"role": "assistant", "content": ans})
+                    save_memory(st.session_state.messages)
+                    speak_and_animate(ans)
+                except Exception as err:
+                    st.error(f"त्रुटि: {err}")
