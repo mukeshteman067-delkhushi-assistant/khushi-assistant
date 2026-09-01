@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import os
 import re
+import base64
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 from google import genai
@@ -15,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. UI Layout & Split Styling
+# 2. Styling (50-50 Split Layout with HD Rectangular Avatar Card)
 st.markdown("""
 <style>
     .block-container {
@@ -23,25 +24,22 @@ st.markdown("""
         padding-bottom: 0.4rem;
         max-width: 100%;
     }
-    .video-viewport {
-        width: 100%;
-        height: 38vh;
-        background: radial-gradient(circle, #20203a, #0d0d17);
-        border-radius: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #3d3d5c;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
-        position: relative;
-        overflow: hidden;
-        margin-bottom: 6px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Gemini Engine Configuration
+# 3. Load User's Actual khushi.jpg as Base64 to guarantee direct rendering
+def get_image_base64():
+    if os.path.exists("khushi.jpg"):
+        try:
+            with open("khushi.jpg", "rb") as img_file:
+                return f"data:image/jpeg;base64,{base64.b64encode(img_file.read()).decode('utf-8')}"
+        except Exception:
+            return ""
+    return ""
+
+khushi_b64 = get_image_base64()
+
+# 4. Gemini Engine Setup
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
 @st.cache_resource
@@ -52,7 +50,6 @@ def get_client(key):
 
 client = get_client(API_KEY)
 
-# Calculate IST Time using standard built-in datetime
 ist_offset = timezone(timedelta(hours=5, minutes=30))
 current_now = datetime.now(ist_offset).strftime("%I:%M %p, %d %B %Y")
 
@@ -93,82 +90,68 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 4. Top 50%: Real-Time Interactive Talking Video Canvas Avatar
-st.components.v1.html("""
-<div class="video-viewport" style="width:100%; height:260px; background:radial-gradient(circle, #20203a, #0d0d17); border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; position:relative; overflow:hidden;">
-    <canvas id="avatarCanvas" width="220" height="220" style="border-radius:50%; border:3px solid #ff4b4b; box-shadow:0 0 25px rgba(255,75,75,0.4);"></canvas>
-    <div id="liveBadge" style="margin-top:8px; background:rgba(0, 255, 128, 0.15); color:#00ff80; padding:3px 14px; border-radius:15px; font-size:12px; font-weight:bold; font-family:sans-serif;">
-        🟢 Khushi Live | टॉकिंग वीडियो अवतार सक्रिय
+# 5. Top 50%: HD Video Container with Rectangular Aspect Ratio & Live Speech Wave
+avatar_html = f"""
+<div style="width:100%; height:320px; background:radial-gradient(circle, #1a1a2e, #0a0a12); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.7); position:relative; overflow:hidden;">
+    <div id="videoCard" style="position:relative; width:92%; height:250px; border-radius:14px; overflow:hidden; border:2px solid #ff4b4b; box-shadow:0 0 20px rgba(255,75,75,0.4); display:flex; align-items:center; justify-content:center; background:#12121e; transition: all 0.3s ease;">
+        <img id="avatarImage" src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:top; transition: transform 0.4s ease;" />
+        <div id="waveOverlay" style="position:absolute; bottom:0; left:0; width:100%; height:45px; background:linear-gradient(transparent, rgba(0,0,0,0.8)); display:flex; align-items:flex-end; justify-content:center; gap:5px; padding-bottom:6px; opacity:0; transition:opacity 0.3s ease;">
+            <div class="bar" style="width:4px; height:12px; background:#00ff80; border-radius:2px;"></div>
+            <div class="bar" style="width:4px; height:24px; background:#00ff80; border-radius:2px;"></div>
+            <div class="bar" style="width:4px; height:16px; background:#00ff80; border-radius:2px;"></div>
+            <div class="bar" style="width:4px; height:28px; background:#00ff80; border-radius:2px;"></div>
+            <div class="bar" style="width:4px; height:18px; background:#00ff80; border-radius:2px;"></div>
+            <div class="bar" style="width:4px; height:10px; background:#00ff80; border-radius:2px;"></div>
+        </div>
+    </div>
+    <div id="liveBadge" style="margin-top:8px; background:rgba(0, 255, 128, 0.15); color:#00ff80; padding:4px 16px; border-radius:15px; font-size:12px; font-weight:bold; font-family:sans-serif; letter-spacing:0.5px;">
+        🟢 Khushi Live | स्टैंडबाय
     </div>
 </div>
 
+<style>
+    @keyframes waveAnim {{
+        0% {{ height: 8px; }}
+        50% {{ height: 32px; }}
+        100% {{ height: 8px; }}
+    }}
+    .speaking-card {{
+        border-color: #00ff80 !important;
+        box-shadow: 0 0 35px rgba(0, 255, 128, 0.6) !important;
+    }}
+    .speaking-card img {{
+        transform: scale(1.03);
+    }}
+    .speaking-wave .bar:nth-child(1) {{ animation: waveAnim 0.8s infinite ease-in-out; }}
+    .speaking-wave .bar:nth-child(2) {{ animation: waveAnim 0.6s infinite ease-in-out 0.1s; }}
+    .speaking-wave .bar:nth-child(3) {{ animation: waveAnim 0.9s infinite ease-in-out 0.2s; }}
+    .speaking-wave .bar:nth-child(4) {{ animation: waveAnim 0.7s infinite ease-in-out 0.3s; }}
+    .speaking-wave .bar:nth-child(5) {{ animation: waveAnim 0.8s infinite ease-in-out 0.15s; }}
+    .speaking-wave .bar:nth-child(6) {{ animation: waveAnim 0.5s infinite ease-in-out 0.25s; }}
+</style>
+
 <script>
-    const canvas = document.getElementById('avatarCanvas');
-    const ctx = canvas.getContext('2d');
+    const card = document.getElementById('videoCard');
     const badge = document.getElementById('liveBadge');
-    
-    let img = new Image();
-    img.src = 'app/static/khushi.jpg';
-    img.onerror = () => { img.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'; };
+    const wave = document.getElementById('waveOverlay');
 
-    let isSpeaking = false;
-    let mouthOpen = 0;
-    let scaleDirection = 1;
-
-    function renderLoop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(110, 110, 108, 0, Math.PI * 2, true);
-        ctx.closePath();
-        ctx.clip();
-
-        if (img.complete && img.naturalWidth > 0) {
-            let breathe = Math.sin(Date.now() / 600) * 2;
-            ctx.drawImage(img, -10, -10 + breathe, 240, 240);
-            
-            if (isSpeaking) {
-                mouthOpen += scaleDirection * 0.15;
-                if (mouthOpen > 1) scaleDirection = -1;
-                if (mouthOpen < 0) scaleDirection = 1;
-                
-                ctx.fillStyle = "rgba(40, 15, 15, 0.75)";
-                ctx.beginPath();
-                ctx.ellipse(110, 142, 11 + (mouthOpen * 4), 3 + (mouthOpen * 6), 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.strokeStyle = "rgba(220, 80, 80, 0.6)";
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-        } else {
-            ctx.fillStyle = '#ff4b4b';
-            ctx.font = '60px sans-serif';
-            ctx.fillText('🌸', 80, 130);
-        }
-        ctx.restore();
-
-        requestAnimationFrame(renderLoop);
-    }
-    img.onload = () => { renderLoop(); };
-    renderLoop();
-
-    window.addEventListener('message', (event) => {
-        if (event.data.type === 'START_SPEAKING') {
-            isSpeaking = true;
-            canvas.style.borderColor = '#00ff80';
-            canvas.style.boxShadow = '0 0 35px rgba(0,255,128,0.7)';
-            badge.innerText = '🗣️ Khushi बोल रही है... (Live Video Sync)';
-        } else if (event.data.type === 'STOP_SPEAKING') {
-            isSpeaking = false;
-            canvas.style.borderColor = '#ff4b4b';
-            canvas.style.boxShadow = '0 0 25px rgba(255,75,75,0.4)';
+    window.addEventListener('message', (event) => {{
+        if (event.data.type === 'START_SPEAKING') {{
+            card.classList.add('speaking-card');
+            wave.style.opacity = '1';
+            wave.classList.add('speaking-wave');
+            badge.innerText = '🗣️ Khushi बोल रही है... (Live Audio Sync)';
+        }} else if (event.data.type === 'STOP_SPEAKING') {{
+            card.classList.remove('speaking-card');
+            wave.style.opacity = '0';
+            wave.classList.remove('speaking-wave');
             badge.innerText = '🟢 Khushi Live | स्टैंडबाय';
-        }
-    });
+        }}
+    }});
 </script>
-""", height=270)
+"""
+
+st.components.v1.html(avatar_html, height=330)
 
 # Voice Dispatcher
 def speak_and_animate(text):
@@ -208,10 +191,10 @@ def speak_and_animate(text):
     """
     st.components.v1.html(js_code, height=0)
 
-# 5. Full Auto Mic & Audio Engine
+# 6. Auto Mic & Speaker Unlock Button
 st.components.v1.html("""
-<div style="text-align:center; padding: 4px;">
-    <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:12px 26px; border-radius:25px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 14px rgba(255,75,75,0.4);">
+<div style="text-align:center; padding: 2px;">
+    <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:12px 28px; border-radius:25px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 14px rgba(255,75,75,0.4);">
         🎙️ बोलें (माइक व स्पीकर एक्टिव)
     </button>
     <p id="micState" style="font-size:12px; color:#888; margin-top:5px;">बटन दबाकर बोलें...</p>
@@ -271,9 +254,9 @@ st.components.v1.html("""
         status.innerText = "ब्राउज़र में वॉइस सपोर्ट उपलब्ध नहीं है";
     }
 </script>
-""", height=80)
+""", height=75)
 
-# 6. Bottom 50%: Workspace
+# 7. Bottom 50%: Workspace
 tab_vision, tab_tools, tab_memory = st.tabs(["📷 लाइव विज़न व चार्ट", "📐 टूल्स व आर्ट", "🧠 मेमोरी"])
 
 with tab_vision:
@@ -294,15 +277,15 @@ with tab_memory:
         save_memory([])
         st.rerun()
 
-# Display Recent Messages
+# Display Recent Chat
 for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Multi-Model Smart Execution
+# Vision & Multimodal Execution Engine
 def analyze_input(prompt, image):
     models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash']
-    default_vision_prompt = "इस इमेज का ध्यानपूर्वक विश्लेषण करें। यदि यह शेयर मार्केट का चार्ट है तो सपोर्ट, रेजिस्टेंस और ट्रेंड बताएं। यदि यह दस्तावेज़ या वस्तु है तो इसका विवरण दें।"
+    default_vision_prompt = "इस तस्वीर का ध्यानपूर्वक विश्लेषण करें। यदि यह शेयर मार्केट का चार्ट है तो सपोर्ट, रेजिस्टेंस और ट्रेंड बताएं। यदि यह दस्तावेज़ या वस्तु है तो इसका विवरण दें।"
     final_prompt = prompt if prompt else default_vision_prompt
 
     payload = [final_prompt, Image.open(image)] if image else final_prompt
@@ -321,7 +304,7 @@ def analyze_input(prompt, image):
             continue
     return "माफ़ कीजिए, मैं अभी जवाब नहीं दे पा रही हूँ।"
 
-# Processing Prompt
+# Process Prompt
 user_prompt = st.chat_input("यहाँ लिखें या माइक से बोलें...")
 
 if user_prompt or (active_image and st.button("🔍 इस इमेज का तुरंत विश्लेषण करें")):
@@ -341,3 +324,4 @@ if user_prompt or (active_image and st.button("🔍 इस इमेज का �
                 st.session_state.messages.append({"role": "assistant", "content": ans})
                 save_memory(st.session_state.messages)
                 speak_and_animate(ans)
+        
