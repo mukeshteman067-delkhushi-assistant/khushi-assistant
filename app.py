@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import re
 from PIL import Image
 from google import genai
 from google.genai import types
@@ -13,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. Custom Styling
+# 2. Custom Styling (50-50 Split Layout)
 st.markdown("""
 <style>
     .block-container {
@@ -56,7 +57,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Client Setup
+# 3. Client & Persona Setup
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
 @st.cache_resource
@@ -69,22 +70,33 @@ client = get_client(API_KEY)
 
 SYSTEM_PERSONA = """
 तुम 'Khushi' हो - एक अत्यंत बुद्धिमान, हमदर्द, सच्ची दोस्त और मल्टी-टैलेंटेड डिजिटल साथी।
-1. हमेशा आदर, विनम्रता और सकारात्मक ऊर्जा 😊 के साथ बात करो।
-2. शेयर मार्केट (RSI, EMA, Support/Resistance), वैदिक ज्ञान, विज्ञान, गणित और कोडिंग के सवालों के सटीक और सीधे जवाब दो।
-3. जवाब स्वाभाविक और बोलचाल की स्पष्ट हिंदी में दो।
+1. हमेशा आदर, विनम्रता, स्वाभाविक अपनेपन और सकारात्मक ऊर्जा के साथ बात करो।
+2. शेयर मार्केट (चार्ट्स, RSI, EMA, Support/Resistance), वैदिक ज्ञान, विज्ञान, गणित और कोडिंग के सवालों के सटीक और सीधे समाधान दो।
+3. जवाब में गैर-ज़रूरी सिंबल या चिन्हों का उच्चारण न हो, बल्कि स्वाभाविक प्रवाह में बात करो।
 """
 
-# Active Mobile Speaker Engine
+# Smart Voice Synthesizer (Cleans Emojis, Symbols & Punctuation from Audio Speech)
+def clean_for_speech(text):
+    # Remove emojis and Unicode pictographs
+    text = re.sub(r'[\U00010000-\U0010ffff]', '', text)
+    # Remove symbols like *, #, ~, `, _, +, =, |, \, <, >, ^
+    text = re.sub(r'[*#~`_+=|\\<>^]', ' ', text)
+    # Remove punctuation words like comma, dash, quotes to ensure natural pauses
+    text = text.replace('"', '').replace("'", "").replace("—", " ").replace("-", " ")
+    # Normalize multiple whitespaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
 def speak_text(text):
-    clean_text = text.replace('"', '').replace("'", "").replace("\n", " ").replace("`", "")
+    spoken_text = clean_for_speech(text)
     js_code = f"""
     <script>
         if ('speechSynthesis' in window) {{
             window.speechSynthesis.cancel();
-            var utterance = new SpeechSynthesisUtterance("{clean_text}");
+            var utterance = new SpeechSynthesisUtterance("{spoken_text}");
             utterance.lang = 'hi-IN';
-            utterance.rate = 1.0;
-            utterance.pitch = 1.1;
+            utterance.rate = 0.95;
+            utterance.pitch = 1.05;
             window.speechSynthesis.speak(utterance);
         }}
     </script>
@@ -112,7 +124,7 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 4. Top 50%: Avatar Display
+# 4. Top 50%: Khushi HD Live Avatar
 with st.container():
     st.markdown('<div class="avatar-box">', unsafe_allow_html=True)
     if os.path.exists("khushi.jpg"):
@@ -122,7 +134,7 @@ with st.container():
     st.markdown('<div class="status-badge">🟢 Khushi Live | ऑडियो व विज़न सक्रिय</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 5. Full Auto Mic with Audio Speaker Unlock
+# 5. Full Auto Mic & Speaker Bridge
 st.components.v1.html("""
 <div style="text-align:center; padding: 4px;">
     <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:12px 26px; border-radius:25px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 14px rgba(255,75,75,0.4);">
@@ -135,7 +147,6 @@ st.components.v1.html("""
     const status = document.getElementById('micState');
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    // Mobile audio context unlock
     function unlockAudio() {
         if ('speechSynthesis' in window) {
             var silent = new SpeechSynthesisUtterance("");
@@ -209,12 +220,12 @@ with tab_memory:
         save_memory([])
         st.rerun()
 
-# Display Recent Chat
+# Display Recent Interaction History
 for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Multi-Model Smart Execution (Quota Protected)
+# Multi-Model Smart Execution
 def call_gemini_smart(prompt, image):
     models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash']
     payload = [prompt, Image.open(image)] if image else prompt
@@ -235,7 +246,7 @@ def call_gemini_smart(prompt, image):
             continue
     raise last_err
 
-# Processing Input
+# Process Chat & Voice Prompt
 user_prompt = st.chat_input("यहाँ लिखें या माइक से बोलें...")
 
 if user_prompt:
@@ -245,7 +256,7 @@ if user_prompt:
 
     with st.chat_message("assistant"):
         if not client:
-            st.error("API Key नहीं मिली।")
+            st.error("API Key नहीं मिली। कृपया Secrets में GEMINI_API_KEY जोड़ें।")
         else:
             with st.spinner("Khushi विश्लेषण कर रही है... ✨"):
                 try:
@@ -256,4 +267,3 @@ if user_prompt:
                     speak_text(ans)
                 except Exception as e:
                     st.error(f"त्रुटि: {e}")
-                    
