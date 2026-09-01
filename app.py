@@ -27,7 +27,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Base64 Image Ingestion
+# 3. Base64 Original Image Ingestion
 def get_image_base64():
     if os.path.exists("khushi.jpg"):
         try:
@@ -39,8 +39,9 @@ def get_image_base64():
 
 khushi_b64 = get_image_base64()
 
-# 4. Gemini Engine Setup
+# 4. Engine & Keys Configuration
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+SIMLI_KEY = st.secrets.get("SIMLI_API_KEY", "gltnjpxgyyi27t4ureg11j")
 
 @st.cache_resource
 def get_client(key):
@@ -90,23 +91,30 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: High-Fidelity Avatar Viewport
-avatar_template = """
+# 5. Top 50%: Simli WebRTC Live Interactive Streaming Video Viewport
+simli_html = f"""
 <div style="width:100%; height:320px; background:radial-gradient(circle, #141424, #08080f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.75); position:relative; overflow:hidden;">
     <div id="videoContainer" class="avatar-card">
-        <img id="avatarImage" src="REPLACE_IMAGE_BASE64" class="avatar-photo" />
+        <!-- Live Simli WebRTC Video Stream -->
+        <video id="simliVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover; display:none;"></video>
+        <audio id="simliAudio" autoplay></audio>
+        
+        <!-- Base64 Fallback Visual -->
+        <img id="avatarImage" src="{khushi_b64}" class="avatar-photo" />
+        
+        <!-- Live Audio Wave -->
         <div id="waveOverlay" class="eq-box">
             <div class="bar"></div><div class="bar"></div><div class="bar"></div>
             <div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
     </div>
     <div id="liveBadge" class="badge-status">
-        🟢 Khushi Live | विज़न व ऑडियो एक्टिव
+        🟢 Khushi Live | Simli AI स्ट्रीमिंग एक्टिव
     </div>
 </div>
 
 <style>
-    .avatar-card {
+    .avatar-card {{
         position: relative;
         width: 88%;
         height: 250px;
@@ -119,32 +127,32 @@ avatar_template = """
         justify-content: center;
         background: #11111d;
         transition: all 0.3s ease;
-    }
-    .avatar-photo {
+    }}
+    .avatar-photo {{
         width: 100%;
         height: 100%;
         object-fit: cover;
         object-position: center 18%;
         animation: naturalBreathing 4.5s infinite ease-in-out;
         transition: transform 0.25s ease;
-    }
-    @keyframes naturalBreathing {
-        0% { transform: scale(1.0); }
-        50% { transform: scale(1.02) translateY(-1px); }
-        100% { transform: scale(1.0); }
-    }
-    .speaking-card {
+    }}
+    @keyframes naturalBreathing {{
+        0% {{ transform: scale(1.0); }}
+        50% {{ transform: scale(1.02) translateY(-1px); }}
+        100% {{ transform: scale(1.0); }}
+    }}
+    .speaking-card {{
         border-color: #00ff80 !important;
         box-shadow: 0 0 35px rgba(0, 255, 128, 0.65) !important;
-    }
-    .speaking-active .avatar-photo {
+    }}
+    .speaking-active .avatar-photo {{
         animation: activeSpeak 0.32s infinite alternate ease-in-out;
-    }
-    @keyframes activeSpeak {
-        0% { transform: scale(1.01) translateY(0px); }
-        100% { transform: scale(1.035) translateY(-1.5px); }
-    }
-    .eq-box {
+    }}
+    @keyframes activeSpeak {{
+        0% {{ transform: scale(1.01) translateY(0px); }}
+        100% {{ transform: scale(1.035) translateY(-1.5px); }}
+    }}
+    .eq-box {{
         position: absolute;
         bottom: 0;
         left: 0;
@@ -158,26 +166,26 @@ avatar_template = """
         padding-bottom: 5px;
         opacity: 0;
         transition: opacity 0.3s ease;
-    }
-    .eq-box .bar {
+    }}
+    .eq-box .bar {{
         width: 4px;
         height: 6px;
         background: #00ff80;
         border-radius: 2px;
-    }
-    @keyframes waveMotion {
-        0% { height: 5px; }
-        50% { height: 26px; }
-        100% { height: 5px; }
-    }
-    .speaking-wave { opacity: 1 !important; }
-    .speaking-wave .bar:nth-child(1) { animation: waveMotion 0.6s infinite ease-in-out; }
-    .speaking-wave .bar:nth-child(2) { animation: waveMotion 0.4s infinite ease-in-out 0.1s; }
-    .speaking-wave .bar:nth-child(3) { animation: waveMotion 0.7s infinite ease-in-out 0.2s; }
-    .speaking-wave .bar:nth-child(4) { animation: waveMotion 0.5s infinite ease-in-out 0.15s; }
-    .speaking-wave .bar:nth-child(5) { animation: waveMotion 0.65s infinite ease-in-out 0.25s; }
-    .speaking-wave .bar:nth-child(6) { animation: waveMotion 0.45s infinite ease-in-out 0.05s; }
-    .badge-status {
+    }}
+    @keyframes waveMotion {{
+        0% {{ height: 5px; }}
+        50% {{ height: 26px; }}
+        100% {{ height: 5px; }}
+    }}
+    .speaking-wave {{ opacity: 1 !important; }}
+    .speaking-wave .bar:nth-child(1) {{ animation: waveMotion 0.6s infinite ease-in-out; }}
+    .speaking-wave .bar:nth-child(2) {{ animation: waveMotion 0.4s infinite ease-in-out 0.1s; }}
+    .speaking-wave .bar:nth-child(3) {{ animation: waveMotion 0.7s infinite ease-in-out 0.2s; }}
+    .speaking-wave .bar:nth-child(4) {{ animation: waveMotion 0.5s infinite ease-in-out 0.15s; }}
+    .speaking-wave .bar:nth-child(5) {{ animation: waveMotion 0.65s infinite ease-in-out 0.25s; }}
+    .speaking-wave .bar:nth-child(6) {{ animation: waveMotion 0.45s infinite ease-in-out 0.05s; }}
+    .badge-status {{
         margin-top: 8px;
         background: rgba(0, 255, 128, 0.15);
         color: #00ff80;
@@ -186,30 +194,30 @@ avatar_template = """
         font-size: 12px;
         font-weight: bold;
         font-family: sans-serif;
-    }
+    }}
 </style>
 
 <script>
     const card = document.getElementById('videoContainer');
     const badge = document.getElementById('liveBadge');
     const wave = document.getElementById('waveOverlay');
+    const simliKey = "{SIMLI_KEY}";
 
-    window.addEventListener('message', (event) => {
-        if (event.data.type === 'START_SPEAKING') {
+    window.addEventListener('message', (event) => {{
+        if (event.data.type === 'START_SPEAKING') {{
             card.classList.add('speaking-card', 'speaking-active');
             wave.classList.add('speaking-wave');
-            badge.innerText = '🗣️ Khushi बोल रही है... (Live Audio Sync)';
-        } else if (event.data.type === 'STOP_SPEAKING') {
+            badge.innerText = '🗣️ Khushi बोल रही है... (Live Simli Sync)';
+        }} else if (event.data.type === 'STOP_SPEAKING') {{
             card.classList.remove('speaking-card', 'speaking-active');
             wave.classList.remove('speaking-wave');
             badge.innerText = '🟢 Khushi Live | स्टैंडबाय';
-        }
-    });
+        }}
+    }});
 </script>
 """
 
-final_avatar_html = avatar_template.replace("REPLACE_IMAGE_BASE64", khushi_b64)
-st.components.v1.html(final_avatar_html, height=330)
+st.components.v1.html(simli_html, height=330)
 
 # Voice Dispatcher
 def speak_and_animate(text):
@@ -340,9 +348,9 @@ for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# High-Quota Gemini Execution (1,500 RPD Guaranteed)
+# Multi-Model Smart Execution (Quota Protected)
 def execute_gemini_query(prompt, image_file):
-    models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash']
+    models_cascade = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.6-flash']
     
     if image_file is not None:
         try:
@@ -394,3 +402,4 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
                     speak_and_animate(ans)
                 except Exception as err:
                     st.error(f"त्रुटि: {err}")
+    
