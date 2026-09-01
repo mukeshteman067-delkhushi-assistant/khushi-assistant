@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. Custom UI Styling
+# 2. Custom UI Styling with Dynamic Speaking Avatar Animation
 st.markdown("""
 <style>
     .block-container {
@@ -37,14 +37,38 @@ st.markdown("""
         overflow: hidden;
         margin-bottom: 8px;
     }
-    .avatar-box img {
+    
+    .avatar-frame {
+        position: relative;
         height: 72%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .avatar-frame img {
+        height: 100%;
         width: auto;
         border-radius: 50%;
         border: 3px solid #ff4b4b;
         box-shadow: 0 0 20px rgba(255, 75, 75, 0.5);
         object-fit: cover;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
+
+    /* Speaking Pulse Animation */
+    .speaking img {
+        animation: pulseAvatar 1.4s infinite ease-in-out;
+        border-color: #00ff80 !important;
+        box-shadow: 0 0 35px rgba(0, 255, 128, 0.7) !important;
+    }
+
+    @keyframes pulseAvatar {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
     .status-badge {
         margin-top: 6px;
         background: rgba(0, 255, 128, 0.15);
@@ -75,7 +99,7 @@ SYSTEM_PERSONA = """
 3. अपने निष्कर्ष को स्पष्ट, संक्षिप्त और स्वाभाविक बोलचाल की हिंदी में पेश करो ताकि सुनकर आसानी से समझा जा सके।
 """
 
-# Audio Speech Cleaner
+# Audio Speech Cleaner & Voice Output with Dynamic Avatar Trigger
 def clean_for_speech(text):
     text = re.sub(r'[\U00010000-\U0010ffff]', '', text)
     text = re.sub(r'[*#~`_+=|\\<>^]', ' ', text)
@@ -93,6 +117,30 @@ def speak_text(text):
             utterance.lang = 'hi-IN';
             utterance.rate = 0.95;
             utterance.pitch = 1.05;
+
+            var avatar = window.parent.document.getElementById('khushiAvatarContainer');
+            var statusTag = window.parent.document.getElementById('khushiLiveStatus');
+
+            utterance.onstart = function() {{
+                if (avatar) avatar.classList.add('speaking');
+                if (statusTag) {{
+                    statusTag.innerText = "🗣️ Khushi बोल रही है...";
+                    statusTag.style.color = "#00ff80";
+                }}
+            }};
+
+            utterance.onend = function() {{
+                if (avatar) avatar.classList.remove('speaking');
+                if (statusTag) {{
+                    statusTag.innerText = "🟢 Khushi Live | स्टैंडबाय";
+                    statusTag.style.color = "#00ff80";
+                }}
+            }};
+
+            utterance.onerror = function() {{
+                if (avatar) avatar.classList.remove('speaking');
+            }};
+
             window.speechSynthesis.speak(utterance);
         }}
     </script>
@@ -120,14 +168,16 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 4. Top 50%: Live Avatar Display
+# 4. Top 50%: Dynamic Live Avatar Display
 with st.container():
     st.markdown('<div class="avatar-box">', unsafe_allow_html=True)
+    st.markdown('<div id="khushiAvatarContainer" class="avatar-frame">', unsafe_allow_html=True)
     if os.path.exists("khushi.jpg"):
         st.image("khushi.jpg", width=175)
     else:
         st.markdown("<h1 style='font-size: 70px; margin: 0;'>🌸</h1>", unsafe_allow_html=True)
-    st.markdown('<div class="status-badge">🟢 Khushi Live | Phase 2.1 विज़न एनालाइज़र सक्रिय</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div id="khushiLiveStatus" class="status-badge">🟢 Khushi Live | फेज 2.2 डायनामिक अवतार एक्टिव</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # 5. Full Auto Mic & Speaker Bridge
@@ -208,7 +258,7 @@ with tab_vision:
 active_image = cam_shot if cam_shot else file_doc
 
 with tab_tools:
-    st.info("💡 शेयर मार्केट टूल्स, गणितीय कैलकुलेटर व इमेज जनरेशन यहाँ लोड होंगे।")
+    st.info("💡 शेयर मार्केट टूल्स, वैदिक गणित व इमेज जनरेशन यहाँ लोड होंगे।")
 
 with tab_memory:
     if st.button("🗑️ चैट हिस्ट्री साफ़ करें"):
@@ -216,7 +266,7 @@ with tab_memory:
         save_memory([])
         st.rerun()
 
-# Display Recent History
+# Display Recent Interaction History
 for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
@@ -266,3 +316,4 @@ if user_prompt or (active_image and st.button("🔍 इस इमेज का �
                 st.session_state.messages.append({"role": "assistant", "content": ans})
                 save_memory(st.session_state.messages)
                 speak_text(ans)
+    
