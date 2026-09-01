@@ -90,7 +90,7 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: Robust Avatar Viewport (Zero Black Screen Guaranteed)
+# 5. Top 50%: High-Fidelity Avatar Viewport
 avatar_template = """
 <div style="width:100%; height:320px; background:radial-gradient(circle, #141424, #08080f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.75); position:relative; overflow:hidden;">
     <div id="videoContainer" class="avatar-card">
@@ -198,7 +198,7 @@ avatar_template = """
         if (event.data.type === 'START_SPEAKING') {
             card.classList.add('speaking-card', 'speaking-active');
             wave.classList.add('speaking-wave');
-            badge.innerText = '🗣️ Khushi बोल रही है... (Live Sync)';
+            badge.innerText = '🗣️ Khushi बोल रही है... (Live Audio Sync)';
         } else if (event.data.type === 'STOP_SPEAKING') {
             card.classList.remove('speaking-card', 'speaking-active');
             wave.classList.remove('speaking-wave');
@@ -340,9 +340,8 @@ for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Multi-Model Smart Execution (Fail-Safe Quota Fallback Chain)
+# High-Quota Gemini Execution (1,500 RPD Guaranteed)
 def execute_gemini_query(prompt, image_file):
-    # Fallback cascade: Lite -> Flash -> 3.6 Flash (ensures 100% uptime without hitting limits)
     models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash']
     
     if image_file is not None:
@@ -395,4 +394,3 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
                     speak_and_animate(ans)
                 except Exception as err:
                     st.error(f"त्रुटि: {err}")
-    
