@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. Styling (50-50 Split Layout with HD Rectangular Avatar Card)
+# 2. Layout Styling
 st.markdown("""
 <style>
     .block-container {
@@ -27,7 +27,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Load User's Actual khushi.jpg as Base64 to guarantee direct rendering
+# 3. Base64 Image Ingestion
 def get_image_base64():
     if os.path.exists("khushi.jpg"):
         try:
@@ -57,8 +57,8 @@ SYSTEM_PERSONA = f"""
 तुम 'Khushi' हो - एक अत्यंत बुद्धिमान, हमदर्द, सच्ची दोस्त और मल्टी-टैलेंटेड डिजिटल साथी।
 वर्तमान समय (IST): {current_now}
 1. हमेशा आदर, विनम्रता, स्वाभाविक अपनेपन और सकारात्मक ऊर्जा के साथ बात करो।
-2. जब समय पूछा जाए तो ऊपर दिए गए सटीक वर्तमान समय को स्वाभाविक रूप से बताओ।
-3. शेयर मार्केट (चार्ट्स, सपोर्ट/रेजिस्टेंस, इंडिकेटर्स), विज्ञान, वैदिक ज्ञान, गणित और कोडिंग के सटीक उत्तर दो।
+2. जब समय पूछा जाए तो सटीक वर्तमान समय बताओ।
+3. शेयर मार्केट, विज्ञान, वैदिक ज्ञान, गणित और कोडिंग के सटीक उत्तर दो।
 4. जवाब स्वाभाविक और बोलचाल की स्पष्ट हिंदी में दो।
 """
 
@@ -90,60 +90,129 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: HD Video Container with Rectangular Aspect Ratio & Live Speech Wave
+# 5. Top 50%: Face-Morphing & Talking Expression Engine
 avatar_html = f"""
 <div style="width:100%; height:320px; background:radial-gradient(circle, #1a1a2e, #0a0a12); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.7); position:relative; overflow:hidden;">
-    <div id="videoCard" style="position:relative; width:92%; height:250px; border-radius:14px; overflow:hidden; border:2px solid #ff4b4b; box-shadow:0 0 20px rgba(255,75,75,0.4); display:flex; align-items:center; justify-content:center; background:#12121e; transition: all 0.3s ease;">
-        <img id="avatarImage" src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:top; transition: transform 0.4s ease;" />
-        <div id="waveOverlay" style="position:absolute; bottom:0; left:0; width:100%; height:45px; background:linear-gradient(transparent, rgba(0,0,0,0.8)); display:flex; align-items:flex-end; justify-content:center; gap:5px; padding-bottom:6px; opacity:0; transition:opacity 0.3s ease;">
-            <div class="bar" style="width:4px; height:12px; background:#00ff80; border-radius:2px;"></div>
-            <div class="bar" style="width:4px; height:24px; background:#00ff80; border-radius:2px;"></div>
-            <div class="bar" style="width:4px; height:16px; background:#00ff80; border-radius:2px;"></div>
-            <div class="bar" style="width:4px; height:28px; background:#00ff80; border-radius:2px;"></div>
-            <div class="bar" style="width:4px; height:18px; background:#00ff80; border-radius:2px;"></div>
-            <div class="bar" style="width:4px; height:10px; background:#00ff80; border-radius:2px;"></div>
+    <div id="videoCard" class="video-card">
+        <div id="avatarWrap" class="avatar-wrap">
+            <img id="avatarImage" src="{khushi_b64}" class="avatar-img" />
+            <div id="mouthMover" class="mouth-overlay"></div>
+        </div>
+        <div id="waveOverlay" class="wave-box">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
     </div>
-    <div id="liveBadge" style="margin-top:8px; background:rgba(0, 255, 128, 0.15); color:#00ff80; padding:4px 16px; border-radius:15px; font-size:12px; font-weight:bold; font-family:sans-serif; letter-spacing:0.5px;">
+    <div id="liveBadge" style="margin-top:8px; background:rgba(0, 255, 128, 0.15); color:#00ff80; padding:4px 16px; border-radius:15px; font-size:12px; font-weight:bold; font-family:sans-serif;">
         🟢 Khushi Live | स्टैंडबाय
     </div>
 </div>
 
 <style>
-    @keyframes waveAnim {{
-        0% {{ height: 8px; }}
-        50% {{ height: 32px; }}
-        100% {{ height: 8px; }}
+    .video-card {{
+        position: relative;
+        width: 92%;
+        height: 250px;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 2px solid #ff4b4b;
+        box-shadow: 0 0 20px rgba(255,75,75,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #12121e;
+        transition: all 0.3s ease;
     }}
+    .avatar-wrap {{
+        width: 100%;
+        height: 100%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform-origin: center bottom;
+    }}
+    .avatar-img {{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top;
+        transition: transform 0.2s ease;
+    }}
+    
+    /* Speaking State Dynamics */
     .speaking-card {{
         border-color: #00ff80 !important;
         box-shadow: 0 0 35px rgba(0, 255, 128, 0.6) !important;
     }}
-    .speaking-card img {{
-        transform: scale(1.03);
+    
+    /* Natural Head Bob & Micro-Expressions */
+    .speaking-anim .avatar-img {{
+        animation: speechBob 0.35s infinite alternate ease-in-out;
     }}
-    .speaking-wave .bar:nth-child(1) {{ animation: waveAnim 0.8s infinite ease-in-out; }}
-    .speaking-wave .bar:nth-child(2) {{ animation: waveAnim 0.6s infinite ease-in-out 0.1s; }}
-    .speaking-wave .bar:nth-child(3) {{ animation: waveAnim 0.9s infinite ease-in-out 0.2s; }}
-    .speaking-wave .bar:nth-child(4) {{ animation: waveAnim 0.7s infinite ease-in-out 0.3s; }}
-    .speaking-wave .bar:nth-child(5) {{ animation: waveAnim 0.8s infinite ease-in-out 0.15s; }}
-    .speaking-wave .bar:nth-child(6) {{ animation: waveAnim 0.5s infinite ease-in-out 0.25s; }}
+
+    @keyframes speechBob {{
+        0% {{
+            transform: scale(1.0) translateY(0px);
+        }}
+        50% {{
+            transform: scale(1.02, 0.99) translateY(1.5px);
+        }}
+        100% {{
+            transform: scale(1.01, 1.02) translateY(-1px);
+        }}
+    }}
+
+    .wave-box {{
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 40px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.85));
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 5px;
+        padding-bottom: 6px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }}
+    .wave-box .bar {{
+        width: 4px;
+        height: 10px;
+        background: #00ff80;
+        border-radius: 2px;
+    }}
+    @keyframes waveMotion {{
+        0% {{ height: 6px; }}
+        50% {{ height: 26px; }}
+        100% {{ height: 6px; }}
+    }}
+    .speaking-wave {{ opacity: 1 !important; }}
+    .speaking-wave .bar:nth-child(1) {{ animation: waveMotion 0.6s infinite ease-in-out; }}
+    .speaking-wave .bar:nth-child(2) {{ animation: waveMotion 0.4s infinite ease-in-out 0.1s; }}
+    .speaking-wave .bar:nth-child(3) {{ animation: waveMotion 0.7s infinite ease-in-out 0.2s; }}
+    .speaking-wave .bar:nth-child(4) {{ animation: waveMotion 0.5s infinite ease-in-out 0.15s; }}
+    .speaking-wave .bar:nth-child(5) {{ animation: waveMotion 0.6s infinite ease-in-out 0.25s; }}
+    .speaking-wave .bar:nth-child(6) {{ animation: waveMotion 0.45s infinite ease-in-out 0.05s; }}
 </style>
 
 <script>
     const card = document.getElementById('videoCard');
+    const wrap = document.getElementById('avatarWrap');
     const badge = document.getElementById('liveBadge');
     const wave = document.getElementById('waveOverlay');
 
     window.addEventListener('message', (event) => {{
         if (event.data.type === 'START_SPEAKING') {{
             card.classList.add('speaking-card');
-            wave.style.opacity = '1';
+            wrap.classList.add('speaking-anim');
             wave.classList.add('speaking-wave');
-            badge.innerText = '🗣️ Khushi बोल रही है... (Live Audio Sync)';
+            badge.innerText = '🗣️ Khushi बोल रही है... (Live Expression)';
         }} else if (event.data.type === 'STOP_SPEAKING') {{
             card.classList.remove('speaking-card');
-            wave.style.opacity = '0';
+            wrap.classList.remove('speaking-anim');
             wave.classList.remove('speaking-wave');
             badge.innerText = '🟢 Khushi Live | स्टैंडबाय';
         }}
@@ -277,12 +346,10 @@ with tab_memory:
         save_memory([])
         st.rerun()
 
-# Display Recent Chat
 for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Vision & Multimodal Execution Engine
 def analyze_input(prompt, image):
     models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash']
     default_vision_prompt = "इस तस्वीर का ध्यानपूर्वक विश्लेषण करें। यदि यह शेयर मार्केट का चार्ट है तो सपोर्ट, रेजिस्टेंस और ट्रेंड बताएं। यदि यह दस्तावेज़ या वस्तु है तो इसका विवरण दें।"
@@ -304,7 +371,6 @@ def analyze_input(prompt, image):
             continue
     return "माफ़ कीजिए, मैं अभी जवाब नहीं दे पा रही हूँ।"
 
-# Process Prompt
 user_prompt = st.chat_input("यहाँ लिखें या माइक से बोलें...")
 
 if user_prompt or (active_image and st.button("🔍 इस इमेज का तुरंत विश्लेषण करें")):
@@ -324,4 +390,3 @@ if user_prompt or (active_image and st.button("🔍 इस इमेज का �
                 st.session_state.messages.append({"role": "assistant", "content": ans})
                 save_memory(st.session_state.messages)
                 speak_and_animate(ans)
-        
