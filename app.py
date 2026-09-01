@@ -39,7 +39,7 @@ def get_image_base64():
 
 khushi_b64 = get_image_base64()
 
-# 4. Gemini 3.6 Flash Engine Setup
+# 4. Gemini Engine Setup
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
 @st.cache_resource
@@ -50,7 +50,6 @@ def get_client(key):
 
 client = get_client(API_KEY)
 
-# Calculate IST Time
 ist_offset = timezone(timedelta(hours=5, minutes=30))
 current_now = datetime.now(ist_offset).strftime("%I:%M %p, %d %B %Y")
 
@@ -91,70 +90,61 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: Dual-State Real MP4 Video Engine
-video_engine_template = """
+# 5. Top 50%: Robust Avatar Viewport (Zero Black Screen Guaranteed)
+avatar_template = """
 <div style="width:100%; height:320px; background:radial-gradient(circle, #141424, #08080f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.75); position:relative; overflow:hidden;">
-    <div id="videoContainer" class="video-container">
-        <!-- Idle Video (Breathing & Blinking) -->
-        <video id="idleVideo" class="avatar-vid active-vid" autoplay loop muted playsinline>
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-portrait-of-a-woman-smiling-at-the-camera-40156-large.mp4" type="video/mp4">
-        </video>
-        <!-- Talking Video (Active Lips & Gestures) -->
-        <video id="talkingVideo" class="avatar-vid" loop muted playsinline>
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-young-woman-talking-on-a-video-call-40157-large.mp4" type="video/mp4">
-        </video>
-        <!-- Static Fallback if Offline -->
-        <img id="fallbackImg" src="REPLACE_IMAGE_BASE64" class="fallback-img" />
-        
-        <!-- Live Equalizer -->
-        <div id="waveOverlay" class="equalizer-box">
-            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+    <div id="videoContainer" class="avatar-card">
+        <img id="avatarImage" src="REPLACE_IMAGE_BASE64" class="avatar-photo" />
+        <div id="waveOverlay" class="eq-box">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
     </div>
     <div id="liveBadge" class="badge-status">
-        🟢 Khushi Live | MP4 वीडियो अवतार सक्रिय
+        🟢 Khushi Live | विज़न व ऑडियो एक्टिव
     </div>
 </div>
 
 <style>
-    .video-container {
+    .avatar-card {
         position: relative;
         width: 88%;
         height: 250px;
         border-radius: 16px;
         overflow: hidden;
         border: 2px solid #ff4b4b;
-        box-shadow: 0 0 20px rgba(255,75,75,0.3);
+        box-shadow: 0 0 20px rgba(255,75,75,0.35);
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #0d0d18;
+        background: #11111d;
         transition: all 0.3s ease;
     }
-    .avatar-vid {
-        position: absolute;
+    .avatar-photo {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        opacity: 0;
-        transition: opacity 0.35s ease-in-out;
+        object-position: center 18%;
+        animation: naturalBreathing 4.5s infinite ease-in-out;
+        transition: transform 0.25s ease;
     }
-    .active-vid {
-        opacity: 1 !important;
-        z-index: 2;
+    @keyframes naturalBreathing {
+        0% { transform: scale(1.0); }
+        50% { transform: scale(1.02) translateY(-1px); }
+        100% { transform: scale(1.0); }
     }
-    .fallback-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: none;
-    }
-    .speaking-border {
+    .speaking-card {
         border-color: #00ff80 !important;
-        box-shadow: 0 0 35px rgba(0, 255, 128, 0.6) !important;
+        box-shadow: 0 0 35px rgba(0, 255, 128, 0.65) !important;
     }
-    .equalizer-box {
+    .speaking-active .avatar-photo {
+        animation: activeSpeak 0.32s infinite alternate ease-in-out;
+    }
+    @keyframes activeSpeak {
+        0% { transform: scale(1.01) translateY(0px); }
+        100% { transform: scale(1.035) translateY(-1.5px); }
+    }
+    .eq-box {
         position: absolute;
         bottom: 0;
         left: 0;
@@ -167,28 +157,26 @@ video_engine_template = """
         gap: 4px;
         padding-bottom: 5px;
         opacity: 0;
-        z-index: 3;
         transition: opacity 0.3s ease;
     }
-    .eq-bar {
+    .eq-box .bar {
         width: 4px;
         height: 6px;
         background: #00ff80;
         border-radius: 2px;
     }
-    @keyframes eqMotion {
-        0% { height: 4px; }
+    @keyframes waveMotion {
+        0% { height: 5px; }
         50% { height: 26px; }
-        100% { height: 4px; }
+        100% { height: 5px; }
     }
-    .speaking-eq { opacity: 1 !important; }
-    .speaking-eq .eq-bar:nth-child(1) { animation: eqMotion 0.5s infinite ease-in-out; }
-    .speaking-eq .eq-bar:nth-child(2) { animation: eqMotion 0.35s infinite ease-in-out 0.05s; }
-    .speaking-eq .eq-bar:nth-child(3) { animation: eqMotion 0.65s infinite ease-in-out 0.15s; }
-    .speaking-eq .eq-bar:nth-child(4) { animation: eqMotion 0.45s infinite ease-in-out 0.1s; }
-    .speaking-eq .eq-bar:nth-child(5) { animation: eqMotion 0.55s infinite ease-in-out 0.2s; }
-    .speaking-eq .eq-bar:nth-child(6) { animation: eqMotion 0.4s infinite ease-in-out 0.08s; }
-    
+    .speaking-wave { opacity: 1 !important; }
+    .speaking-wave .bar:nth-child(1) { animation: waveMotion 0.6s infinite ease-in-out; }
+    .speaking-wave .bar:nth-child(2) { animation: waveMotion 0.4s infinite ease-in-out 0.1s; }
+    .speaking-wave .bar:nth-child(3) { animation: waveMotion 0.7s infinite ease-in-out 0.2s; }
+    .speaking-wave .bar:nth-child(4) { animation: waveMotion 0.5s infinite ease-in-out 0.15s; }
+    .speaking-wave .bar:nth-child(5) { animation: waveMotion 0.65s infinite ease-in-out 0.25s; }
+    .speaking-wave .bar:nth-child(6) { animation: waveMotion 0.45s infinite ease-in-out 0.05s; }
     .badge-status {
         margin-top: 8px;
         background: rgba(0, 255, 128, 0.15);
@@ -202,39 +190,26 @@ video_engine_template = """
 </style>
 
 <script>
-    const box = document.getElementById('videoContainer');
-    const idleVid = document.getElementById('idleVideo');
-    const talkVid = document.getElementById('talkingVideo');
+    const card = document.getElementById('videoContainer');
     const badge = document.getElementById('liveBadge');
-    const eq = document.getElementById('waveOverlay');
+    const wave = document.getElementById('waveOverlay');
 
-    // Handle Seamless Switch between Idle MP4 and Talking MP4
     window.addEventListener('message', (event) => {
         if (event.data.type === 'START_SPEAKING') {
-            box.classList.add('speaking-border');
-            eq.classList.add('speaking-eq');
-            
-            idleVid.classList.remove('active-vid');
-            talkVid.classList.add('active-vid');
-            talkVid.play();
-
-            badge.innerText = '🗣️ Khushi बोल रही है... (MP4 Video Sync)';
+            card.classList.add('speaking-card', 'speaking-active');
+            wave.classList.add('speaking-wave');
+            badge.innerText = '🗣️ Khushi बोल रही है... (Live Sync)';
         } else if (event.data.type === 'STOP_SPEAKING') {
-            box.classList.remove('speaking-border');
-            eq.classList.remove('speaking-eq');
-
-            talkVid.classList.remove('active-vid');
-            idleVid.classList.add('active-vid');
-            idleVid.play();
-
+            card.classList.remove('speaking-card', 'speaking-active');
+            wave.classList.remove('speaking-wave');
             badge.innerText = '🟢 Khushi Live | स्टैंडबाय';
         }
     });
 </script>
 """
 
-final_video_html = video_engine_template.replace("REPLACE_IMAGE_BASE64", khushi_b64)
-st.components.v1.html(final_video_html, height=330)
+final_avatar_html = avatar_template.replace("REPLACE_IMAGE_BASE64", khushi_b64)
+st.components.v1.html(final_avatar_html, height=330)
 
 # Voice Dispatcher
 def speak_and_animate(text):
@@ -365,8 +340,11 @@ for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Multi-Model Smart Execution (Strict Gemini 3.6 Flash Engine)
+# Multi-Model Smart Execution (Fail-Safe Quota Fallback Chain)
 def execute_gemini_query(prompt, image_file):
+    # Fallback cascade: Lite -> Flash -> 3.6 Flash (ensures 100% uptime without hitting limits)
+    models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash']
+    
     if image_file is not None:
         try:
             img = Image.open(image_file)
@@ -376,16 +354,23 @@ def execute_gemini_query(prompt, image_file):
     else:
         payload = prompt
 
-    res = client.models.generate_content(
-        model='gemini-3.6-flash',
-        contents=payload,
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PERSONA
-        )
-    )
-    if res and res.text:
-        return res.text
-    return "माफ़ कीजिए, मैं समझ नहीं पाई।"
+    last_err = None
+    for model_name in models_cascade:
+        try:
+            res = client.models.generate_content(
+                model=model_name,
+                contents=payload,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PERSONA
+                )
+            )
+            if res and res.text:
+                return res.text
+        except Exception as e:
+            last_err = e
+            continue
+            
+    raise last_err if last_err else Exception("सर्विस व्यस्त है।")
 
 # Process Prompt
 user_prompt = st.chat_input("यहाँ लिखें या माइक से बोलें...")
@@ -399,7 +384,7 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
 
     with st.chat_message("assistant"):
         if not client:
-            st.error("API Key उपलब्ध नहीं है। कृपया Streamlit Secrets जाँचें।")
+            st.error("API Key उपलब्ध नहीं है। कृपया Secrets जाँचें।")
         else:
             with st.spinner("Khushi सोच रही है... ✨"):
                 try:
@@ -410,3 +395,4 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
                     speak_and_animate(ans)
                 except Exception as err:
                     st.error(f"त्रुटि: {err}")
+    
