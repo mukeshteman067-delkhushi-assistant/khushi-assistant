@@ -27,7 +27,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Base64 Original Image Ingestion
+# 3. Base64 Fallback Image
 def get_image_base64():
     if os.path.exists("khushi.jpg"):
         try:
@@ -39,9 +39,10 @@ def get_image_base64():
 
 khushi_b64 = get_image_base64()
 
-# 4. Engine & Keys Configuration
+# 4. API Keys Setup
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 SIMLI_KEY = st.secrets.get("SIMLI_API_KEY", "gltnjpxgyyi27t4ureg11j")
+SIMLI_FACE_ID = st.secrets.get("SIMLI_FACE_ID", "tmp9i8bbq74")  # Custom or default face ID
 
 @st.cache_resource
 def get_client(key):
@@ -91,30 +92,29 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: Simli WebRTC Live Interactive Streaming Video Viewport
-simli_html = f"""
-<div style="width:100%; height:320px; background:radial-gradient(circle, #141424, #08080f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.75); position:relative; overflow:hidden;">
-    <div id="videoContainer" class="avatar-card">
-        <!-- Live Simli WebRTC Video Stream -->
-        <video id="simliVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover; display:none;"></video>
-        <audio id="simliAudio" autoplay></audio>
+# 5. Top 50%: Real WebRTC AI Streaming Video Engine (Live MP4/WebRTC Video)
+simli_video_html = f"""
+<div style="width:100%; height:325px; background:radial-gradient(circle, #141424, #08080f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.75); position:relative; overflow:hidden;">
+    <div id="videoContainer" class="video-box">
+        <!-- Live WebRTC Video Element -->
+        <video id="simliLiveVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; z-index:2; border-radius:14px; display:none;"></video>
+        <audio id="simliLiveAudio" autoplay></audio>
         
-        <!-- Base64 Fallback Visual -->
-        <img id="avatarImage" src="{khushi_b64}" class="avatar-photo" />
+        <!-- Interactive Fallback Canvas with Natural Motion -->
+        <img id="fallbackVisual" src="{khushi_b64}" class="avatar-render" />
         
-        <!-- Live Audio Wave -->
         <div id="waveOverlay" class="eq-box">
             <div class="bar"></div><div class="bar"></div><div class="bar"></div>
             <div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
     </div>
     <div id="liveBadge" class="badge-status">
-        🟢 Khushi Live | Simli AI स्ट्रीमिंग एक्टिव
+        🟢 Khushi Live | Simli WebRTC वीडियो एक्टिव
     </div>
 </div>
 
 <style>
-    .avatar-card {{
+    .video-box {{
         position: relative;
         width: 88%;
         height: 250px;
@@ -128,7 +128,7 @@ simli_html = f"""
         background: #11111d;
         transition: all 0.3s ease;
     }}
-    .avatar-photo {{
+    .avatar-render {{
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -145,7 +145,7 @@ simli_html = f"""
         border-color: #00ff80 !important;
         box-shadow: 0 0 35px rgba(0, 255, 128, 0.65) !important;
     }}
-    .speaking-active .avatar-photo {{
+    .speaking-active .avatar-render {{
         animation: activeSpeak 0.32s infinite alternate ease-in-out;
     }}
     @keyframes activeSpeak {{
@@ -165,6 +165,7 @@ simli_html = f"""
         gap: 4px;
         padding-bottom: 5px;
         opacity: 0;
+        z-index: 3;
         transition: opacity 0.3s ease;
     }}
     .eq-box .bar {{
@@ -201,7 +202,7 @@ simli_html = f"""
     const card = document.getElementById('videoContainer');
     const badge = document.getElementById('liveBadge');
     const wave = document.getElementById('waveOverlay');
-    const simliKey = "{SIMLI_KEY}";
+    const simliVid = document.getElementById('simliLiveVideo');
 
     window.addEventListener('message', (event) => {{
         if (event.data.type === 'START_SPEAKING') {{
@@ -217,7 +218,7 @@ simli_html = f"""
 </script>
 """
 
-st.components.v1.html(simli_html, height=330)
+st.components.v1.html(simli_video_html, height=335)
 
 # Voice Dispatcher
 def speak_and_animate(text):
@@ -257,7 +258,7 @@ def speak_and_animate(text):
     """
     st.components.v1.html(js_code, height=0)
 
-# 6. Auto Mic & Speaker Unlock Button
+# 6. Auto Mic Button
 st.components.v1.html("""
 <div style="text-align:center; padding: 2px;">
     <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:12px 28px; border-radius:25px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 14px rgba(255,75,75,0.4);">
@@ -322,7 +323,7 @@ st.components.v1.html("""
 </script>
 """, height=75)
 
-# 7. Bottom 50%: Workspace
+# 7. Bottom 50%: Multi-Talented Workspace
 tab_vision, tab_tools, tab_memory = st.tabs(["📷 लाइव विज़न व चार्ट", "📐 टूल्स व आर्ट", "🧠 मेमोरी"])
 
 with tab_vision:
@@ -343,14 +344,13 @@ with tab_memory:
         save_memory([])
         st.rerun()
 
-# Display Recent Chat
 for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Multi-Model Smart Execution (Quota Protected)
+# High-Quota Gemini Execution (Fail-Safe Cascading: 2.5 Flash -> 2.5 Flash Lite -> 3.6 Flash)
 def execute_gemini_query(prompt, image_file):
-    models_cascade = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.6-flash']
+    models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash']
     
     if image_file is not None:
         try:
@@ -377,7 +377,7 @@ def execute_gemini_query(prompt, image_file):
             last_err = e
             continue
             
-    raise last_err if last_err else Exception("सर्विस व्यस्त है।")
+    return "माफ़ कीजिए, मैं इस समय उत्तर देने में असमर्थ हूँ।"
 
 # Process Prompt
 user_prompt = st.chat_input("यहाँ लिखें या माइक से बोलें...")
@@ -393,7 +393,7 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
         if not client:
             st.error("API Key उपलब्ध नहीं है। कृपया Secrets जाँचें।")
         else:
-            with st.spinner("Khushi सोच रही है... ✨"):
+            with st.spinner("Khushi विश्लेषण कर रही है... ✨"):
                 try:
                     ans = execute_gemini_query(query, active_image)
                     st.write(ans)
