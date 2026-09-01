@@ -2,8 +2,7 @@ import streamlit as st
 import json
 import os
 import re
-import datetime
-import pytz
+from datetime import datetime, timezone, timedelta
 from PIL import Image
 from google import genai
 from google.genai import types
@@ -53,9 +52,9 @@ def get_client(key):
 
 client = get_client(API_KEY)
 
-# Get Live Current Time in IST
-ist = pytz.timezone('Asia/Kolkata')
-current_now = datetime.datetime.now(ist).strftime("%I:%M %p, %d %B %Y")
+# Calculate IST Time using standard built-in datetime
+ist_offset = timezone(timedelta(hours=5, minutes=30))
+current_now = datetime.now(ist_offset).strftime("%I:%M %p, %d %B %Y")
 
 SYSTEM_PERSONA = f"""
 तुम 'Khushi' हो - एक अत्यंत बुद्धिमान, हमदर्द, सच्ची दोस्त और मल्टी-टैलेंटेड डिजिटल साथी।
@@ -126,23 +125,19 @@ st.components.v1.html("""
         ctx.clip();
 
         if (img.complete && img.naturalWidth > 0) {
-            // Subtle breathing idle video loop
             let breathe = Math.sin(Date.now() / 600) * 2;
             ctx.drawImage(img, -10, -10 + breathe, 240, 240);
             
-            // Real-Time Lip Sync Video Animation when speaking
             if (isSpeaking) {
                 mouthOpen += scaleDirection * 0.15;
                 if (mouthOpen > 1) scaleDirection = -1;
                 if (mouthOpen < 0) scaleDirection = 1;
                 
-                // Animate mouth opening and talking gesture
                 ctx.fillStyle = "rgba(40, 15, 15, 0.75)";
                 ctx.beginPath();
                 ctx.ellipse(110, 142, 11 + (mouthOpen * 4), 3 + (mouthOpen * 6), 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Lip accent
                 ctx.strokeStyle = "rgba(220, 80, 80, 0.6)";
                 ctx.lineWidth = 2;
                 ctx.stroke();
@@ -159,7 +154,6 @@ st.components.v1.html("""
     img.onload = () => { renderLoop(); };
     renderLoop();
 
-    // Listen to parent speech events
     window.addEventListener('message', (event) => {
         if (event.data.type === 'START_SPEAKING') {
             isSpeaking = true;
@@ -176,7 +170,7 @@ st.components.v1.html("""
 </script>
 """, height=270)
 
-# Voice Dispatcher to Canvas Video
+# Voice Dispatcher
 def speak_and_animate(text):
     spoken_text = clean_for_speech(text)
     js_code = f"""
