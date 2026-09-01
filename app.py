@@ -90,14 +90,14 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: 3D/4D Live Realistic Video Avatar (Eyes Blinking + Real Lip Movement)
-avatar_html = f"""
+# 5. Top 50%: 3D/4D Live Realistic Video Avatar (Syntax-Safe Render Engine)
+avatar_template = """
 <div style="width:100%; height:320px; background:radial-gradient(circle, #1a1a2e, #0a0a12); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.7); position:relative; overflow:hidden;">
     <div id="videoContainer" style="position:relative; width:92%; height:250px; border-radius:14px; overflow:hidden; border:2px solid #ff4b4b; box-shadow:0 0 20px rgba(255,75,75,0.4); background:#12121e;">
         <canvas id="faceCanvas" width="340" height="250" style="width:100%; height:100%; object-fit:cover; display:block;"></canvas>
     </div>
     <div id="liveBadge" style="margin-top:8px; background:rgba(0, 255, 128, 0.15); color:#00ff80; padding:4px 16px; border-radius:15px; font-size:12px; font-weight:bold; font-family:sans-serif;">
-        🟢 Khushi Live | 3D/4D वीडियो अवतार सक्रिय
+        🟢 Khushi Live | 4D वीडियो अवतार सक्रिय
     </div>
 </div>
 
@@ -108,17 +108,16 @@ avatar_html = f"""
     const badge = document.getElementById('liveBadge');
 
     let baseImg = new Image();
-    baseImg.src = "{khushi_b64}";
+    baseImg.src = "REPLACE_IMAGE_BASE64";
 
     let isSpeaking = false;
     let mouthPhase = 0;
-    let blinkPhase = 0; // 0: open, 1: blinking
+    let blinkPhase = 0;
     let lastBlink = Date.now();
 
     function render4DAvatar() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // 1. Subtle 3D Head sway & breathing motion
         const time = Date.now() / 800;
         const breathY = Math.sin(time) * 1.5;
         const tilt = isSpeaking ? Math.sin(Date.now() / 250) * 1.2 : Math.sin(time * 0.5) * 0.5;
@@ -128,85 +127,79 @@ avatar_html = f"""
         ctx.rotate(tilt * Math.PI / 180);
         ctx.drawImage(baseImg, -canvas.width / 2, -canvas.height / 2 + breathY, canvas.width, canvas.height);
 
-        // Relative coordinates for face features
         const mouthX = canvas.width * 0.505;
         const mouthY = canvas.height * 0.635 + breathY;
         const leftEyeX = canvas.width * 0.405;
         const rightEyeX = canvas.width * 0.605;
         const eyeY = canvas.height * 0.405 + breathY;
 
-        // 2. Realistic Eye Blinking Logic (every 3.5s)
+        // Realistic Eye Blinking (Every 3.5s)
         const now = Date.now();
-        if (now - lastBlink > 3500) {{
+        if (now - lastBlink > 3500) {
             blinkPhase = 1;
-            if (now - lastBlink > 3700) {{
+            if (now - lastBlink > 3700) {
                 blinkPhase = 0;
                 lastBlink = now;
-            }}
-        }}
+            }
+        }
 
-        if (blinkPhase === 1) {{
-            // Render eyelid closure
+        if (blinkPhase === 1) {
             ctx.fillStyle = "rgba(180, 130, 110, 0.95)";
-            // Left Eyelid
             ctx.beginPath();
             ctx.ellipse(leftEyeX - canvas.width / 2, eyeY - canvas.height / 2, 12, 5, 0, 0, Math.PI * 2);
             ctx.fill();
-            // Right Eyelid
             ctx.beginPath();
             ctx.ellipse(rightEyeX - canvas.width / 2, eyeY - canvas.height / 2, 12, 5, 0, 0, Math.PI * 2);
             ctx.fill();
-        }}
+        }
 
-        // 3. Dynamic 4D Lip-Syncing & Talking Motion
-        if (isSpeaking) {{
-            mouthPhase = (Math.sin(Date.now() / 80) + 1) / 2; // 0 to 1 fluid oscillation
+        // Realistic Mouth/Lip Movement
+        if (isSpeaking) {
+            mouthPhase = (Math.sin(Date.now() / 80) + 1) / 2;
             const openHeight = 1.5 + (mouthPhase * 5.5);
             const openWidth = 10 + (mouthPhase * 3);
 
-            // Natural mouth inner depth
             ctx.fillStyle = "rgba(45, 12, 15, 0.92)";
             ctx.beginPath();
             ctx.ellipse(mouthX - canvas.width / 2, mouthY - canvas.height / 2, openWidth, openHeight, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Dynamic Lip Contour
             ctx.strokeStyle = "rgba(195, 80, 85, 0.85)";
             ctx.lineWidth = 1.8;
             ctx.stroke();
 
-            // Lower lip highlight
             ctx.fillStyle = "rgba(220, 110, 115, 0.4)";
             ctx.beginPath();
             ctx.ellipse(mouthX - canvas.width / 2, mouthY - canvas.height / 2 + openHeight * 0.8, openWidth * 0.8, 2, 0, 0, Math.PI);
             ctx.fill();
-        }}
+        }
 
         ctx.restore();
         requestAnimationFrame(render4DAvatar);
     }
 
-    baseImg.onload = () => {{
+    baseImg.onload = () => {
         render4DAvatar();
-    }};
+    };
 
-    window.addEventListener('message', (event) => {{
-        if (event.data.type === 'START_SPEAKING') {{
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'START_SPEAKING') {
             isSpeaking = true;
             container.style.borderColor = '#00ff80';
             container.style.boxShadow = '0 0 35px rgba(0,255,128,0.7)';
             badge.innerText = '🗣️ Khushi बोल रही है... (4D Live Sync)';
-        }} else if (event.data.type === 'STOP_SPEAKING') {{
+        } else if (event.data.type === 'STOP_SPEAKING') {
             isSpeaking = false;
             container.style.borderColor = '#ff4b4b';
             container.style.boxShadow = '0 0 20px rgba(255,75,75,0.4)';
             badge.innerText = '🟢 Khushi Live | स्टैंडबाय';
-        }}
-    }});
+        }
+    });
 </script>
 """
 
-st.components.v1.html(avatar_html, height=330)
+final_avatar_html = avatar_template.replace("REPLACE_IMAGE_BASE64", khushi_b64)
+st.components.v1.html(final_avatar_html, height=330)
 
 # Voice Dispatcher
 def speak_and_animate(text):
