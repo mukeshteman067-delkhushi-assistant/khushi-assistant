@@ -39,10 +39,15 @@ def get_image_base64():
 
 khushi_b64 = get_image_base64()
 
-# 4. Engine & Keys Setup
-API_KEY = st.secrets.get("GEMINI_API_KEY", "")
-SIMLI_KEY = st.secrets.get("SIMLI_API_KEY", "gltnjpxgyyi27t4ureg11j")
-SIMLI_FACE_ID = st.secrets.get("SIMLI_FACE_ID", "b9e5fba3-071a-4e35-896e-211c4d6eaa7b")
+# 4. Engine & Keys Setup (Auto-Clean Key Strings)
+raw_gemini_key = st.secrets.get("GEMINI_API_KEY", "")
+API_KEY = "".join(raw_gemini_key.split()) if raw_gemini_key else ""
+
+raw_simli_key = st.secrets.get("SIMLI_API_KEY", "gltnjpxgyyi27t4ureg11j")
+SIMLI_KEY = "".join(raw_simli_key.split()) if raw_simli_key else "gltnjpxgyyi27t4ureg11j"
+
+raw_face_id = st.secrets.get("SIMLI_FACE_ID", "b9e5fba3-071a-4e35-896e-211c4d6eaa7b")
+SIMLI_FACE_ID = "".join(raw_face_id.split()) if raw_face_id else "b9e5fba3-071a-4e35-896e-211c4d6eaa7b"
 
 @st.cache_resource
 def get_client(key):
@@ -92,7 +97,7 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: WebRTC AI Live Streaming Engine (Simli Face Sync)
+# 5. Top 50%: WebRTC Live Streaming Engine
 simli_video_html = f"""
 <div style="width:100%; height:325px; background:radial-gradient(circle, #141424, #08080f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.75); position:relative; overflow:hidden;">
     <div id="videoContainer" class="video-box">
@@ -351,9 +356,9 @@ for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Intelligent Multi-Model Cascade Engine (Quota Protected & Always Online)
+# Intelligent Multi-Model Cascade Engine (Quota Protected & Error-Free)
 def execute_gemini_query(prompt, image_file):
-    models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash']
+    models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.5-flash']
     
     if image_file is not None:
         try:
@@ -380,7 +385,7 @@ def execute_gemini_query(prompt, image_file):
             last_err = e
             continue
             
-    return "माफ़ कीजिए, मैं इस समय उत्तर देने में असमर्थ हूँ।"
+    return f"त्रुटि: {last_err}" if last_err else "माफ़ कीजिए, मैं इस समय उत्तर देने में असमर्थ हूँ।"
 
 # Process Prompt
 user_prompt = st.chat_input("यहाँ लिखें या माइक से बोलें...")
@@ -394,7 +399,7 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
 
     with st.chat_message("assistant"):
         if not client:
-            st.error("API Key उपलब्ध नहीं है। कृपया Streamlit Secrets जाँचें।")
+            st.error("API Key उपलब्ध नहीं है। कृपया Secrets जाँचें।")
         else:
             with st.spinner("Khushi विश्लेषण कर रही है... ✨"):
                 try:
@@ -405,4 +410,4 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
                     speak_and_animate(ans)
                 except Exception as err:
                     st.error(f"त्रुटि: {err}")
-                      
+                    
