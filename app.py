@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. Styling (50-50 Split Layout)
+# 2. Layout Styling
 st.markdown("""
 <style>
     .block-container {
@@ -90,93 +90,84 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: 3D/4D Cinematic Avatar Video Container (Clean & Proportionate)
+# 5. Top 50%: High-Fidelity 3D Video Viewport with Live Audio Dynamic Equalizer
 avatar_template = """
-<div style="width:100%; height:325px; background:radial-gradient(circle, #181828, #0a0a12); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.7); position:relative; overflow:hidden;">
-    <div id="videoCard" class="card-box">
-        <div id="avatarFrame" class="img-frame">
-            <img id="avatarImage" src="REPLACE_IMAGE_BASE64" class="natural-img" />
-            <div id="lipAura" class="lip-aura"></div>
+<div style="width:100%; height:320px; background:radial-gradient(circle, #141424, #08080f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.75); position:relative; overflow:hidden;">
+    <div id="videoCard" class="card-wrapper">
+        <div id="avatarContainer" class="avatar-container">
+            <img id="avatarImage" src="REPLACE_IMAGE_BASE64" class="avatar-render" />
+            <div id="videoGlaze" class="video-glaze"></div>
         </div>
-        <div id="waveOverlay" class="wave-box">
-            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div id="waveOverlay" class="equalizer-bar-box">
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            <div class="eq-bar"></div><div class="eq-bar"></div>
         </div>
     </div>
     <div id="liveBadge" class="badge-status">
-        🟢 Khushi Live | 4D वीडियो अवतार सक्रिय
+        🟢 Khushi Live | 3D/4D अवतार सक्रिय
     </div>
 </div>
 
 <style>
-    .card-box {
+    .card-wrapper {
         position: relative;
         width: 88%;
-        height: 255px;
+        height: 250px;
         border-radius: 16px;
         overflow: hidden;
-        border: 2.5px solid #ff4b4b;
-        box-shadow: 0 0 22px rgba(255,75,75,0.35);
+        border: 2px solid #ff4b4b;
+        box-shadow: 0 0 20px rgba(255,75,75,0.3);
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #10101a;
+        background: #0d0d18;
         transition: all 0.3s ease;
     }
-    .img-frame {
+    .avatar-container {
         width: 100%;
         height: 100%;
         position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
-        animation: subtleBreathe 4s infinite ease-in-out;
-        transform-origin: center center;
+        animation: naturalBreathing 5s infinite ease-in-out;
     }
-    .natural-img {
+    .avatar-render {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        object-position: center 20%;
-        transition: transform 0.3s ease;
+        object-position: center 15%;
+        filter: contrast(102%) brightness(101%);
+        transition: transform 0.25s ease;
     }
-    @keyframes subtleBreathe {
-        0% { transform: scale(1.0); }
-        50% { transform: scale(1.018) translateY(-1px); }
-        100% { transform: scale(1.0); }
+    .video-glaze {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 60%);
+        pointer-events: none;
+    }
+    @keyframes naturalBreathing {
+        0% { transform: scale(1.0) translateY(0px); }
+        50% { transform: scale(1.015) translateY(-1px); }
+        100% { transform: scale(1.0) translateY(0px); }
     }
     .speaking-card {
         border-color: #00ff80 !important;
-        box-shadow: 0 0 35px rgba(0, 255, 128, 0.65) !important;
+        box-shadow: 0 0 35px rgba(0, 255, 128, 0.6) !important;
     }
-    .speaking-active .natural-img {
-        animation: speakingMotion 0.35s infinite alternate ease-in-out;
+    .speaking-active .avatar-render {
+        animation: activeTalking 0.32s infinite alternate ease-in-out;
     }
-    @keyframes speakingMotion {
-        0% { transform: scale(1.01) translateY(0px); }
-        100% { transform: scale(1.03) translateY(-1.5px); }
+    @keyframes activeTalking {
+        0% { transform: scale(1.0) translateY(0px); }
+        50% { transform: scale(1.025) translateY(-1px); }
+        100% { transform: scale(1.015) translateY(0.5px); }
     }
-    .lip-aura {
-        position: absolute;
-        top: 62%;
-        left: 50%;
-        width: 45px;
-        height: 20px;
-        transform: translate(-50%, -50%);
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(255, 120, 140, 0.25) 0%, transparent 70%);
-        opacity: 0;
-        transition: opacity 0.2s ease;
-    }
-    .speaking-active .lip-aura {
-        opacity: 1;
-        animation: lipPulse 0.2s infinite alternate;
-    }
-    @keyframes lipPulse {
-        0% { transform: translate(-50%, -50%) scale(0.9); }
-        100% { transform: translate(-50%, -50%) scale(1.3); }
-    }
-    .wave-box {
+    .equalizer-bar-box {
         position: absolute;
         bottom: 0;
         left: 0;
@@ -186,29 +177,32 @@ avatar_template = """
         display: flex;
         align-items: flex-end;
         justify-content: center;
-        gap: 5px;
+        gap: 4px;
         padding-bottom: 5px;
         opacity: 0;
         transition: opacity 0.3s ease;
     }
-    .wave-box .bar {
-        width: 4px;
-        height: 8px;
+    .eq-bar {
+        width: 3.5px;
+        height: 6px;
         background: #00ff80;
         border-radius: 2px;
     }
-    @keyframes waveMotion {
-        0% { height: 6px; }
-        50% { height: 26px; }
-        100% { height: 6px; }
+    @keyframes eqMotion {
+        0% { height: 4px; }
+        50% { height: 24px; }
+        100% { height: 4px; }
     }
-    .speaking-wave { opacity: 1 !important; }
-    .speaking-wave .bar:nth-child(1) { animation: waveMotion 0.6s infinite ease-in-out; }
-    .speaking-wave .bar:nth-child(2) { animation: waveMotion 0.4s infinite ease-in-out 0.1s; }
-    .speaking-wave .bar:nth-child(3) { animation: waveMotion 0.7s infinite ease-in-out 0.2s; }
-    .speaking-wave .bar:nth-child(4) { animation: waveMotion 0.5s infinite ease-in-out 0.15s; }
-    .speaking-wave .bar:nth-child(5) { animation: waveMotion 0.6s infinite ease-in-out 0.25s; }
-    .speaking-wave .bar:nth-child(6) { animation: waveMotion 0.45s infinite ease-in-out 0.05s; }
+    .speaking-eq { opacity: 1 !important; }
+    .speaking-eq .eq-bar:nth-child(1) { animation: eqMotion 0.5s infinite ease-in-out; }
+    .speaking-eq .eq-bar:nth-child(2) { animation: eqMotion 0.35s infinite ease-in-out 0.05s; }
+    .speaking-eq .eq-bar:nth-child(3) { animation: eqMotion 0.65s infinite ease-in-out 0.15s; }
+    .speaking-eq .eq-bar:nth-child(4) { animation: eqMotion 0.45s infinite ease-in-out 0.1s; }
+    .speaking-eq .eq-bar:nth-child(5) { animation: eqMotion 0.55s infinite ease-in-out 0.2s; }
+    .speaking-eq .eq-bar:nth-child(6) { animation: eqMotion 0.4s infinite ease-in-out 0.08s; }
+    .speaking-eq .eq-bar:nth-child(7) { animation: eqMotion 0.6s infinite ease-in-out 0.18s; }
+    .speaking-eq .eq-bar:nth-child(8) { animation: eqMotion 0.38s infinite ease-in-out 0.12s; }
+    
     .badge-status {
         margin-top: 8px;
         background: rgba(0, 255, 128, 0.15);
@@ -223,20 +217,20 @@ avatar_template = """
 
 <script>
     const card = document.getElementById('videoCard');
-    const frame = document.getElementById('avatarFrame');
+    const container = document.getElementById('avatarContainer');
     const badge = document.getElementById('liveBadge');
-    const wave = document.getElementById('waveOverlay');
+    const eq = document.getElementById('waveOverlay');
 
     window.addEventListener('message', (event) => {
         if (event.data.type === 'START_SPEAKING') {
             card.classList.add('speaking-card');
-            frame.classList.add('speaking-active');
-            wave.classList.add('speaking-wave');
-            badge.innerText = '🗣️ Khushi बोल रही है... (4D Live Sync)';
+            container.classList.add('speaking-active');
+            eq.classList.add('speaking-eq');
+            badge.innerText = '🗣️ Khushi बोल रही है... (Live 4D Sync)';
         } else if (event.data.type === 'STOP_SPEAKING') {
             card.classList.remove('speaking-card');
-            frame.classList.remove('speaking-active');
-            wave.classList.remove('speaking-wave');
+            container.classList.remove('speaking-active');
+            eq.classList.remove('speaking-eq');
             badge.innerText = '🟢 Khushi Live | स्टैंडबाय';
         }
     });
@@ -244,7 +238,7 @@ avatar_template = """
 """
 
 final_avatar_html = avatar_template.replace("REPLACE_IMAGE_BASE64", khushi_b64)
-st.components.v1.html(final_avatar_html, height=335)
+st.components.v1.html(final_avatar_html, height=330)
 
 # Voice Dispatcher
 def speak_and_animate(text):
@@ -284,7 +278,7 @@ def speak_and_animate(text):
     """
     st.components.v1.html(js_code, height=0)
 
-# 6. Auto Mic & Speaker Unlock Button
+# 6. Full Auto Mic Engine
 st.components.v1.html("""
 <div style="text-align:center; padding: 2px;">
     <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:12px 28px; border-radius:25px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 14px rgba(255,75,75,0.4);">
@@ -349,7 +343,7 @@ st.components.v1.html("""
 </script>
 """, height=75)
 
-# 7. Bottom 50%: Multi-Talented Workspace
+# 7. Bottom 50%: Workspace
 tab_vision, tab_tools, tab_memory = st.tabs(["📷 लाइव विज़न व चार्ट", "📐 टूल्स व आर्ट", "🧠 मेमोरी"])
 
 with tab_vision:
@@ -370,12 +364,11 @@ with tab_memory:
         save_memory([])
         st.rerun()
 
-# Display Recent Chat
 for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Robust Multi-Model Engine (Text + Vision Aware)
+# Multi-Model Smart Execution
 def execute_gemini_query(prompt, image_file):
     models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash']
     
