@@ -142,7 +142,6 @@ for msg in st.session_state.messages[-3:]:
 # Dual Input: Text/Voice Chat Bar
 user_prompt = st.chat_input("यहाँ लिखें या माइक से बोलें...")
 
-# If text is present, process response
 if user_prompt:
     st.session_state.messages.append({"role": "user", "content": user_prompt})
     with st.chat_message("user"):
@@ -154,25 +153,48 @@ if user_prompt:
         else:
             with st.spinner("Khushi बोल रही है... ✨"):
                 try:
-                    if active_image:
-                        img = Image.open(active_image)
-                        resp = client.models.generate_content(
-                            model='gemini-2.5-flash',
-                            contents=[user_prompt, img],
-                            config=types.GenerateContentConfig(
-                                system_instruction=SYSTEM_PERSONA,
-                                tools=[{"google_search": {}}]
+                    # Updated to latest supported Gemini Flash model
+                    target_model = 'gemini-2.5-flash'
+                    try:
+                        if active_image:
+                            img = Image.open(active_image)
+                            resp = client.models.generate_content(
+                                model='gemini-2.5-flash',
+                                contents=[user_prompt, img],
+                                config=types.GenerateContentConfig(
+                                    system_instruction=SYSTEM_PERSONA,
+                                    tools=[{"google_search": {}}]
+                                )
                             )
-                        )
-                    else:
-                        resp = client.models.generate_content(
-                            model='gemini-2.5-flash',
-                            contents=user_prompt,
-                            config=types.GenerateContentConfig(
-                                system_instruction=SYSTEM_PERSONA,
-                                tools=[{"google_search": {}}]
+                        else:
+                            resp = client.models.generate_content(
+                                model='gemini-2.5-flash',
+                                contents=user_prompt,
+                                config=types.GenerateContentConfig(
+                                    system_instruction=SYSTEM_PERSONA,
+                                    tools=[{"google_search": {}}]
+                                )
                             )
-                        )
+                    except Exception:
+                        # Auto-fallback to gemini-2.0-flash / 3.6-flash if deprecated
+                        if active_image:
+                            img = Image.open(active_image)
+                            resp = client.models.generate_content(
+                                model='gemini-2.0-flash',
+                                contents=[user_prompt, img],
+                                config=types.GenerateContentConfig(
+                                    system_instruction=SYSTEM_PERSONA
+                                )
+                            )
+                        else:
+                            resp = client.models.generate_content(
+                                model='gemini-2.0-flash',
+                                contents=user_prompt,
+                                config=types.GenerateContentConfig(
+                                    system_instruction=SYSTEM_PERSONA
+                                )
+                            )
+
                     ans = resp.text
                     st.write(ans)
                     st.session_state.messages.append({"role": "assistant", "content": ans})
