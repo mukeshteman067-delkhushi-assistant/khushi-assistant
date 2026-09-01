@@ -27,7 +27,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Base64 Fallback Image
+# 3. Base64 Fallback Image Ingestion
 def get_image_base64():
     if os.path.exists("khushi.jpg"):
         try:
@@ -39,10 +39,10 @@ def get_image_base64():
 
 khushi_b64 = get_image_base64()
 
-# 4. API Keys Setup
+# 4. Engine & Keys Setup
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 SIMLI_KEY = st.secrets.get("SIMLI_API_KEY", "gltnjpxgyyi27t4ureg11j")
-SIMLI_FACE_ID = st.secrets.get("SIMLI_FACE_ID", "tmp9i8bbq74")  # Custom or default face ID
+SIMLI_FACE_ID = st.secrets.get("SIMLI_FACE_ID", "b9e5fba3-071a-4e35-896e-211c4d6eaa7b")
 
 @st.cache_resource
 def get_client(key):
@@ -92,11 +92,11 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: Real WebRTC AI Streaming Video Engine (Live MP4/WebRTC Video)
+# 5. Top 50%: WebRTC AI Live Streaming Engine (Simli Face Sync)
 simli_video_html = f"""
 <div style="width:100%; height:325px; background:radial-gradient(circle, #141424, #08080f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.75); position:relative; overflow:hidden;">
     <div id="videoContainer" class="video-box">
-        <!-- Live WebRTC Video Element -->
+        <!-- Live Video Element -->
         <video id="simliLiveVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; z-index:2; border-radius:14px; display:none;"></video>
         <audio id="simliLiveAudio" autoplay></audio>
         
@@ -109,7 +109,7 @@ simli_video_html = f"""
         </div>
     </div>
     <div id="liveBadge" class="badge-status">
-        🟢 Khushi Live | Simli WebRTC वीडियो एक्टिव
+        🟢 Khushi Live | Simli Streaming Face Active
     </div>
 </div>
 
@@ -203,6 +203,9 @@ simli_video_html = f"""
     const badge = document.getElementById('liveBadge');
     const wave = document.getElementById('waveOverlay');
     const simliVid = document.getElementById('simliLiveVideo');
+
+    const simliApiKey = "{SIMLI_KEY}";
+    const simliFaceId = "{SIMLI_FACE_ID}";
 
     window.addEventListener('message', (event) => {{
         if (event.data.type === 'START_SPEAKING') {{
@@ -323,7 +326,7 @@ st.components.v1.html("""
 </script>
 """, height=75)
 
-# 7. Bottom 50%: Multi-Talented Workspace
+# 7. Bottom 50%: Workspace
 tab_vision, tab_tools, tab_memory = st.tabs(["📷 लाइव विज़न व चार्ट", "📐 टूल्स व आर्ट", "🧠 मेमोरी"])
 
 with tab_vision:
@@ -348,7 +351,7 @@ for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# High-Quota Gemini Execution (Fail-Safe Cascading: 2.5 Flash -> 2.5 Flash Lite -> 3.6 Flash)
+# Intelligent Multi-Model Cascade Engine (Quota Protected & Always Online)
 def execute_gemini_query(prompt, image_file):
     models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.6-flash']
     
@@ -391,7 +394,7 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
 
     with st.chat_message("assistant"):
         if not client:
-            st.error("API Key उपलब्ध नहीं है। कृपया Secrets जाँचें।")
+            st.error("API Key उपलब्ध नहीं है। कृपया Streamlit Secrets जाँचें।")
         else:
             with st.spinner("Khushi विश्लेषण कर रही है... ✨"):
                 try:
@@ -402,4 +405,4 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
                     speak_and_animate(ans)
                 except Exception as err:
                     st.error(f"त्रुटि: {err}")
-    
+                      
