@@ -8,7 +8,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-# 1. Page Configuration (Full Mobile & Desktop Responsive)
+# 1. Page Configuration
 st.set_page_config(
     page_title="Khushi AI Companion",
     page_icon="🌸",
@@ -16,23 +16,32 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. Ultra-Clean Professional Layout Styling
+# 2. Ultra-Clean Layout Styling (Mobile & Desktop Responsive)
 st.markdown("""
 <style>
     .block-container {
-        padding-top: 0.2rem;
-        padding-bottom: 0.5rem;
-        padding-left: 0.8rem;
-        padding-right: 0.8rem;
+        padding-top: 0.1rem;
+        padding-bottom: 5.5rem;
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
         max-width: 100%;
     }
-    header { visibility: hidden; }
-    #MainMenu { visibility: hidden; }
-    footer { visibility: hidden; }
+    header, #MainMenu, footer { visibility: hidden; }
+    
+    /* Sticky Top Control Header */
+    .sticky-header {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        background: #0e1117;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #22223b;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Base64 Original Image Ingestion (Zero Lag & Always Safe)
+# 3. Base64 Original Image Ingestion
 def get_image_base64():
     if os.path.exists("khushi.jpg"):
         try:
@@ -44,7 +53,7 @@ def get_image_base64():
 
 khushi_b64 = get_image_base64()
 
-# 4. API Key Sanitizer (Eliminates TOML Newline / Spacing Errors)
+# 4. Engine & Keys Setup (Auto-Clean)
 raw_gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_gemini_key.split()) if raw_gemini_key else ""
 
@@ -78,7 +87,7 @@ def clean_for_speech(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# Long-Term Persistent Memory Handling
+# Long-Term Persistent Memory
 MEMORY_FILE = "khushi_memory.json"
 def load_memory():
     if os.path.exists(MEMORY_FILE):
@@ -99,128 +108,259 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: Cinema-Grade Living Visual Engine (100% Khushi's Original Face)
-avatar_visual_html = f"""
-<div style="width:100%; height:320px; background:radial-gradient(circle, #151528, #07070f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d66; box-shadow:0 10px 32px rgba(0,0,0,0.8); position:relative; overflow:hidden;">
-    <div id="videoContainer" class="avatar-card">
+# 5. Top 25% Split Header: Rectangular Viewport + Zoom Controls + Speech Push/Stop
+top_header_html = f"""
+<div id="topHeaderContainer" class="split-viewport-wrapper">
+    <!-- Left Rectangular Avatar (Corner Frame) -->
+    <div id="avatarFrame" class="rect-avatar" onclick="toggleZoom()" title="टैप करके ज़ूम इन / आउट करें">
         <img id="avatarImage" src="{khushi_b64}" class="avatar-photo" />
-        <div id="glowRing" class="aura-glow"></div>
         <div id="waveOverlay" class="eq-box">
             <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div>
         </div>
     </div>
-    <div id="liveBadge" class="badge-status">
-        🟢 Khushi Live | ऑडियो-विज़न सिंक एक्टिव
+
+    <!-- Right Quick Controls & Push Engine -->
+    <div class="control-panel">
+        <div class="status-indicator">
+            <span id="liveDot" style="color:#00ff80;">●</span> <span id="statusLabel" style="color:#e0e0e0; font-size:11px; font-weight:bold;">Khushi Live</span>
+        </div>
+        <div class="action-buttons">
+            <button id="zoomBtn" onclick="toggleZoom()" class="tool-btn zoom-btn">⛶ ज़ूम इन</button>
+            <button id="stopBtn" onclick="interruptSpeech()" class="tool-btn stop-btn">🛑 रोकें / पुश</button>
+        </div>
     </div>
 </div>
 
 <style>
-    .avatar-card {{
-        position: relative;
-        width: 86%;
-        max-width: 320px;
-        height: 250px;
-        border-radius: 16px;
-        overflow: hidden;
-        border: 2px solid #ff4b4b;
-        box-shadow: 0 0 25px rgba(255,75,75,0.35);
+    .split-viewport-wrapper {{
+        width: 100%;
+        height: 145px;
+        background: linear-gradient(135deg, #151528, #090914);
+        border-radius: 14px;
         display: flex;
         align-items: center;
-        justify-content: center;
-        background: #11111d;
-        transition: all 0.35s ease;
+        justify-content: space-between;
+        padding: 8px 12px;
+        border: 1px solid #3d3d66;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.65);
+        position: relative;
+        transition: all 0.4s ease;
     }}
+
+    /* Cinema-Grade 1-Click Zoom-In Mode */
+    .split-viewport-wrapper.full-zoom-mode {{
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 94vh !important;
+        z-index: 999999 !important;
+        border-radius: 0 !important;
+        background: #06060c !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        padding: 10px !important;
+    }}
+
+    .split-viewport-wrapper.full-zoom-mode .rect-avatar {{
+        width: 95% !important;
+        max-width: 650px !important;
+        height: 82vh !important;
+        border-color: #00ff80 !important;
+    }}
+
+    .split-viewport-wrapper.full-zoom-mode .control-panel {{
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: auto !important;
+    }}
+
+    .rect-avatar {{
+        position: relative;
+        width: 125px;
+        height: 125px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 2px solid #ff4b4b;
+        box-shadow: 0 0 15px rgba(255,75,75,0.3);
+        cursor: pointer;
+        background: #11111d;
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+    }}
+
     .avatar-photo {{
         width: 100%;
         height: 100%;
         object-fit: cover;
-        object-position: center 18%;
-        animation: naturalBreathing 4.2s infinite ease-in-out;
+        object-position: center 15%;
+        animation: naturalBreathing 4.5s infinite ease-in-out;
         transition: transform 0.25s ease;
     }}
+
     @keyframes naturalBreathing {{
         0% {{ transform: scale(1.0); }}
-        50% {{ transform: scale(1.025) translateY(-1.5px); }}
+        50% {{ transform: scale(1.03) translateY(-1px); }}
         100% {{ transform: scale(1.0); }}
     }}
+
     .speaking-card {{
         border-color: #00ff80 !important;
-        box-shadow: 0 0 35px rgba(0, 255, 128, 0.6) !important;
+        box-shadow: 0 0 25px rgba(0, 255, 128, 0.6) !important;
     }}
+
     .speaking-active .avatar-photo {{
-        animation: speechPulse 0.35s infinite alternate ease-in-out;
+        animation: activePulse 0.32s infinite alternate ease-in-out;
     }}
-    @keyframes speechPulse {{
-        0% {{ transform: scale(1.015) translateY(0px); }}
-        100% {{ transform: scale(1.045) translateY(-2px); }}
+
+    @keyframes activePulse {{
+        0% {{ transform: scale(1.02); }}
+        100% {{ transform: scale(1.06); }}
     }}
+
     .eq-box {{
         position: absolute;
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 40px;
+        height: 28px;
         background: linear-gradient(transparent, rgba(0,0,0,0.85));
         display: flex;
         align-items: flex-end;
         justify-content: center;
-        gap: 4px;
-        padding-bottom: 6px;
+        gap: 3px;
+        padding-bottom: 3px;
         opacity: 0;
         transition: opacity 0.3s ease;
         z-index: 3;
     }}
+
     .eq-box .bar {{
-        width: 4px;
-        height: 6px;
+        width: 3px;
+        height: 4px;
         background: #00ff80;
         border-radius: 2px;
     }}
+
     @keyframes waveMotion {{
-        0% {{ height: 6px; }}
-        50% {{ height: 26px; }}
-        100% {{ height: 6px; }}
+        0% {{ height: 4px; }}
+        50% {{ height: 18px; }}
+        100% {{ height: 4px; }}
     }}
+
     .speaking-wave {{ opacity: 1 !important; }}
-    .speaking-wave .bar:nth-child(1) {{ animation: waveMotion 0.6s infinite ease-in-out; }}
-    .speaking-wave .bar:nth-child(2) {{ animation: waveMotion 0.4s infinite ease-in-out 0.1s; }}
-    .speaking-wave .bar:nth-child(3) {{ animation: waveMotion 0.7s infinite ease-in-out 0.2s; }}
-    .speaking-wave .bar:nth-child(4) {{ animation: waveMotion 0.5s infinite ease-in-out 0.15s; }}
-    .speaking-wave .bar:nth-child(5) {{ animation: waveMotion 0.65s infinite ease-in-out 0.25s; }}
-    .speaking-wave .bar:nth-child(6) {{ animation: waveMotion 0.45s infinite ease-in-out 0.05s; }}
-    .badge-status {{
-        margin-top: 8px;
-        background: rgba(0, 255, 128, 0.15);
-        color: #00ff80;
-        padding: 4px 18px;
-        border-radius: 15px;
-        font-size: 12px;
+    .speaking-wave .bar:nth-child(1) {{ animation: waveMotion 0.5s infinite ease-in-out; }}
+    .speaking-wave .bar:nth-child(2) {{ animation: waveMotion 0.35s infinite ease-in-out 0.1s; }}
+    .speaking-wave .bar:nth-child(3) {{ animation: waveMotion 0.6s infinite ease-in-out 0.2s; }}
+    .speaking-wave .bar:nth-child(4) {{ animation: waveMotion 0.45s infinite ease-in-out 0.15s; }}
+    .speaking-wave .bar:nth-child(5) {{ animation: waveMotion 0.55s infinite ease-in-out 0.05s; }}
+
+    .control-panel {{
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: center;
+        padding-left: 10px;
+        gap: 8px;
+    }}
+
+    .status-indicator {{
+        background: rgba(255,255,255,0.06);
+        padding: 3px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }}
+
+    .action-buttons {{
+        display: flex;
+        gap: 8px;
+    }}
+
+    .tool-btn {{
+        border: none;
+        padding: 7px 12px;
+        border-radius: 18px;
+        font-size: 11px;
         font-weight: bold;
-        font-family: sans-serif;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }}
+
+    .zoom-btn {{
+        background: #1e293b;
+        color: #38bdf8;
+        border: 1px solid #38bdf8;
+    }}
+    .zoom-btn:hover {{
+        background: #38bdf8;
+        color: #000;
+    }}
+
+    .stop-btn {{
+        background: #3f1515;
+        color: #ff6b6b;
+        border: 1px solid #ff4b4b;
+    }}
+    .stop-btn:hover {{
+        background: #ff4b4b;
+        color: white;
     }}
 </style>
 
 <script>
-    const card = document.getElementById('videoContainer');
-    const badge = document.getElementById('liveBadge');
+    const wrapper = document.getElementById('topHeaderContainer');
+    const zoomBtn = document.getElementById('zoomBtn');
+    const avatar = document.getElementById('avatarFrame');
+    const statusLabel = document.getElementById('statusLabel');
     const wave = document.getElementById('waveOverlay');
+
+    let isZoomed = false;
+
+    function toggleZoom() {{
+        isZoomed = !isZoomed;
+        if (isZoomed) {{
+            wrapper.classList.add('full-zoom-mode');
+            zoomBtn.innerText = '✕ छोटा करें';
+            zoomBtn.style.color = '#fff';
+            zoomBtn.style.borderColor = '#fff';
+        }} else {{
+            wrapper.classList.remove('full-zoom-mode');
+            zoomBtn.innerText = '⛶ ज़ूम इन';
+            zoomBtn.style.color = '#38bdf8';
+            zoomBtn.style.borderColor = '#38bdf8';
+        }}
+    }}
+
+    function interruptSpeech() {{
+        if ('speechSynthesis' in window) {{
+            window.speechSynthesis.cancel();
+        }}
+        avatar.classList.remove('speaking-card', 'speaking-active');
+        wave.classList.remove('speaking-wave');
+        statusLabel.innerText = 'Khushi Live | स्टैंडबाय';
+    }}
 
     window.addEventListener('message', (event) => {{
         if (event.data.type === 'START_SPEAKING') {{
-            card.classList.add('speaking-card', 'speaking-active');
+            avatar.classList.add('speaking-card', 'speaking-active');
             wave.classList.add('speaking-wave');
-            badge.innerText = '🗣️ Khushi बोल रही है... (Live Sync)';
+            statusLabel.innerText = '🗣️ बोल रही है...';
         }} else if (event.data.type === 'STOP_SPEAKING') {{
-            card.classList.remove('speaking-card', 'speaking-active');
+            avatar.classList.remove('speaking-card', 'speaking-active');
             wave.classList.remove('speaking-wave');
-            badge.innerText = '🟢 Khushi Live | तैयार है';
+            statusLabel.innerText = 'Khushi Live | तैयार है';
         }}
     }});
 </script>
 """
 
-st.components.v1.html(avatar_visual_html, height=330)
+# Render Sticky Top 25% Viewport
+st.markdown('<div class="sticky-header">', unsafe_allow_html=True)
+st.components.v1.html(top_header_html, height=155)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Voice Dispatcher
 def speak_and_animate(text):
@@ -263,10 +403,10 @@ def speak_and_animate(text):
 # 6. One-Touch Auto Mic Button
 st.components.v1.html("""
 <div style="text-align:center; padding: 2px;">
-    <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:12px 30px; border-radius:25px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 14px rgba(255,75,75,0.4);">
+    <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:10px 26px; border-radius:22px; font-weight:bold; cursor:pointer; font-size:14px; box-shadow:0 4px 12px rgba(255,75,75,0.35);">
         🎙️ बोलें (माइक व स्पीकर एक्टिव)
     </button>
-    <p id="micState" style="font-size:12px; color:#888; margin-top:5px;">बटन दबाकर बोलें...</p>
+    <p id="micState" style="font-size:11px; color:#888; margin-top:4px;">बटन दबाकर बोलें...</p>
 </div>
 <script>
     const btn = document.getElementById('autoMic');
@@ -323,25 +463,20 @@ st.components.v1.html("""
         status.innerText = "ब्राउज़र में वॉइस सपोर्ट उपलब्ध नहीं है";
     }
 </script>
-""", height=75)
+""", height=65)
 
-# 7. Bottom 50%: Multi-Talented Workspace
-tab_vision, tab_tools, tab_memory = st.tabs(["📷 लाइव विज़न व चार्ट", "📐 टूल्स व आर्ट", "🧠 मेमोरी"])
+# 7. On-Demand Tools Expander (No Always-On Camera taking screen space)
+active_image = None
+with st.expander("📷 चार्ट या इमेज कैप्चर करें (ऑन-डिमांड कैमरा व स्कैनर)", expanded=False):
+    col_opt1, col_opt2 = st.columns([1, 1])
+    with col_opt1:
+        cam_shot = st.camera_input("कैमरा स्कैन", label_visibility="collapsed")
+    with col_opt2:
+        file_doc = st.file_uploader("चार्ट या गैलरी फोटो", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+    active_image = cam_shot if cam_shot else file_doc
 
-with tab_vision:
-    col_v1, col_v2 = st.columns([1, 1])
-    with col_v1:
-        cam_shot = st.camera_input("कैमरा स्कैन", label_visibility="visible")
-    with col_v2:
-        file_doc = st.file_uploader("चार्ट या फोटो चुनें", type=["png", "jpg", "jpeg"], label_visibility="visible")
-
-active_image = cam_shot if cam_shot else file_doc
-
-with tab_tools:
-    st.info("💡 शेयर मार्केट तकनीकी टूल्स, वैदिक गणित व इमेज जनरेशन सक्रिय हैं।")
-    st.markdown("चार्ट अपलोड करके सपोर्ट, रेजिस्टेंस या ब्रेकआउट्स का सीधा लाइव विश्लेषण प्राप्त करें।")
-
-with tab_memory:
+with st.expander("⚙️ सेटिंग्स, टूल्स व मेमोरी", expanded=False):
+    st.info("💡 शेयर मार्केट तकनीकी विश्लेषण, वैदिक गणित और मेमोरी मैनेजमेंट।")
     if st.button("🗑️ चैट हिस्ट्री साफ़ करें"):
         st.session_state.messages = []
         save_memory([])
@@ -352,7 +487,7 @@ for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Multi-Model Smart Cascade (1,500 RPD Guaranteed, No 429 Stops)
+# Intelligent Multi-Model Cascade (1,500 RPD Shield)
 def execute_gemini_query(prompt, image_file):
     models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash']
     
