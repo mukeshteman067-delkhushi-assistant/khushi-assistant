@@ -8,7 +8,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-# 1. Page Configuration (Full Responsive Mobile-First)
+# 1. Page Configuration (Responsive Mobile-First)
 st.set_page_config(
     page_title="Khushi AI Companion",
     page_icon="🌸",
@@ -16,27 +16,27 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. Modern UI Layout & Viewport Lock Styling
+# 2. Ultra-Clean Layout Styling
 st.markdown("""
 <style>
     .block-container {
         padding-top: 0.1rem;
         padding-bottom: 5rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
         max-width: 100%;
     }
     header, #MainMenu, footer { visibility: hidden; }
     
     /* Fixed Top Control Header */
-    .sketch-header-box {
+    .sticky-header-panel {
         position: -webkit-sticky;
         position: sticky;
         top: 0;
         z-index: 999;
-        background: #0e1117;
-        padding-bottom: 2px;
-        border-bottom: 1px solid #1f293d;
+        background: #0b0d14;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #1e2238;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -53,7 +53,7 @@ def get_image_base64():
 
 khushi_b64 = get_image_base64()
 
-# 4. Engine & Keys Setup (Auto-Clean)
+# 4. Engine & Keys Setup (Auto-Sanitized)
 raw_gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_gemini_key.split()) if raw_gemini_key else ""
 
@@ -108,13 +108,13 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Hand-Drawn Sketch Layout (Top 25% Section + Zoom + Push + Icons)
-sketch_layout_html = f"""
-<div id="masterSketchContainer" class="sketch-wrapper">
-    <!-- Top Row: Left Avatar (25%) + Right Control Grid (75%) -->
-    <div class="top-row">
-        <!-- Left: Khushi Rectangular Avatar -->
-        <div id="avatarFrame" class="avatar-rect" onclick="toggleZoom()" title="टैप करके ज़ूम इन / आउट करें">
+# 5. Top 50% Section: 25% Large Rectangular Avatar + 25% Action Controls + Full Action Strip
+pro_header_html = f"""
+<div id="masterHeader" class="pro-header-wrapper">
+    <!-- 50% Upper Section Split: Left 25% Avatar + Right 25% Controls -->
+    <div class="split-row">
+        <!-- Left 25%: Enlarged Rectangular Avatar -->
+        <div id="avatarFrame" class="avatar-portrait" onclick="toggleZoom()" title="ज़ूम करने के लिए टैप करें">
             <img id="avatarImage" src="{khushi_b64}" class="avatar-photo" />
             <div id="waveOverlay" class="eq-box">
                 <div class="bar"></div><div class="bar"></div><div class="bar"></div>
@@ -122,62 +122,61 @@ sketch_layout_html = f"""
             </div>
         </div>
 
-        <!-- Right: Header & 4 Icon Grid -->
-        <div class="controls-grid-container">
-            <div class="header-status">
-                <span class="dot-live">●</span>
-                <span id="statusText" class="title-text">खुशी Live</span>
+        <!-- Right 25%: Pro Control Grid -->
+        <div class="controls-column">
+            <div class="status-badge">
+                <span class="pulse-dot">●</span>
+                <span id="statusLabel">Khushi Live</span>
             </div>
 
-            <!-- 2x2 Action Icons Grid (① ज़ूम इन, ② पुश, ③ कैमरा, ④ सेटिंग्स) -->
-            <div class="icon-grid">
-                <button id="zoomBtn" onclick="toggleZoom()" class="grid-btn btn-zoom" title="① ज़ूम इन">
-                    <span class="btn-num">①</span> ⛶ ज़ूम इन
+            <div class="actions-grid">
+                <button id="zoomBtn" onclick="toggleZoom()" class="pro-btn btn-zoom" title="फुल डिस्प्ले ज़ूम">
+                    ⛶ ज़ूम इन
                 </button>
-                <button id="stopBtn" onclick="interruptSpeech()" class="grid-btn btn-push" title="② पुश (बोलना रोकें)">
-                    <span class="btn-num">②</span> 🛑 पुश
+                <button id="stopBtn" onclick="interruptSpeech()" class="pro-btn btn-pause" title="बोलना बीच में रोकें">
+                    🛑 पुश / स्टॉप
                 </button>
-                <button onclick="triggerCameraExpander()" class="grid-btn btn-cam" title="③ कैमरा">
-                    <span class="btn-num">③</span> 📷 कैमरा
+                <button id="camToggleBtn" onclick="toggleToolsModal('cameraModal')" class="pro-btn btn-camera" title="कैमरा व इमेज अपलोड">
+                    📷 कैमरा
                 </button>
-                <button onclick="triggerSettingsExpander()" class="grid-btn btn-gear" title="④ सेटिंग्स">
-                    <span class="btn-num">④</span> ⚙️ सेटिंग्स
+                <button id="settingsToggleBtn" onclick="toggleToolsModal('settingsModal')" class="pro-btn btn-settings" title="टूल्स व सेटिंग्स">
+                    ⚙️ सेटिंग्स
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ⑤ Wide Action Bar: माइक व स्पीकर एक्टिव (One-Touch Audio & Voice) -->
-    <div class="mic-speaker-bar">
-        <button id="autoMic" class="wide-mic-btn">
-            🎙️ ⑤ माइक व स्पीकर एक्टिव (टैप करें और बोलें)
+    <!-- Wide Action Strip: माइक व स्पीकर एक्टिव -->
+    <div class="action-strip">
+        <button id="autoMic" class="mic-trigger-btn">
+            🎙️ माइक व स्पीकर एक्टिव (बोलने के लिए टैप करें)
         </button>
-        <p id="micState" class="mic-status-msg">तैयार है... बटन दबाकर बोलें</p>
+        <p id="micState" class="mic-hint-text">माइक तैयार है... बटन दबाकर बोलें</p>
     </div>
 </div>
 
 <style>
-    .sketch-wrapper {{
+    .pro-header-wrapper {{
         width: 100%;
-        background: linear-gradient(145deg, #131526, #090a14);
-        border-radius: 14px;
-        padding: 8px 10px;
-        border: 1px solid #2e3856;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+        background: linear-gradient(145deg, #111424, #080912);
+        border-radius: 16px;
+        padding: 10px 12px;
+        border: 1px solid #252b48;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.75);
         position: relative;
-        transition: all 0.35s ease;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }}
 
-    /* Cinema-Grade 1-Click Zoom-In Mode */
-    .sketch-wrapper.full-zoom-mode {{
+    /* Cinema-Grade 1-Click Zoom-In View */
+    .pro-header-wrapper.full-zoom-mode {{
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         width: 100vw !important;
-        height: 94vh !important;
+        height: 95vh !important;
         z-index: 999999 !important;
         border-radius: 0 !important;
-        background: #06060c !important;
+        background: #04050a !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
@@ -185,48 +184,48 @@ sketch_layout_html = f"""
         padding: 12px !important;
     }}
 
-    .sketch-wrapper.full-zoom-mode .avatar-rect {{
+    .pro-header-wrapper.full-zoom-mode .avatar-portrait {{
         width: 95% !important;
-        max-width: 650px !important;
-        height: 82vh !important;
+        max-width: 680px !important;
+        height: 84vh !important;
         border-color: #00ff80 !important;
+        box-shadow: 0 0 35px rgba(0, 255, 128, 0.5) !important;
     }}
 
-    .sketch-wrapper.full-zoom-mode .controls-grid-container {{
+    .pro-header-wrapper.full-zoom-mode .controls-column {{
         position: absolute;
         top: 15px;
         right: 15px;
-        width: auto !important;
     }}
 
-    .sketch-wrapper.full-zoom-mode .icon-grid {{
+    .pro-header-wrapper.full-zoom-mode .actions-grid {{
         display: flex !important;
         flex-direction: column !important;
-        gap: 6px !important;
+        gap: 8px !important;
     }}
 
-    .sketch-wrapper.full-zoom-mode .mic-speaker-bar {{
+    .pro-header-wrapper.full-zoom-mode .action-strip {{
         display: none !important;
     }}
 
-    .top-row {{
+    .split-row {{
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
+        gap: 12px;
     }}
 
-    /* Left Rectangular Avatar (25% Width Frame) */
-    .avatar-rect {{
+    /* Left 25% Section: Enlarged Frame for Perfect Visual Prominence */
+    .avatar-portrait {{
         position: relative;
-        width: 110px;
-        height: 110px;
-        border-radius: 12px;
+        width: 140px;
+        height: 140px;
+        border-radius: 14px;
         overflow: hidden;
         border: 2px solid #ff4b4b;
-        box-shadow: 0 0 15px rgba(255,75,75,0.35);
+        box-shadow: 0 0 18px rgba(255, 75, 75, 0.35);
         cursor: pointer;
-        background: #0e0e18;
+        background: #0c0d16;
         flex-shrink: 0;
         transition: all 0.3s ease;
     }}
@@ -248,7 +247,7 @@ sketch_layout_html = f"""
 
     .speaking-card {{
         border-color: #00ff80 !important;
-        box-shadow: 0 0 25px rgba(0, 255, 128, 0.65) !important;
+        box-shadow: 0 0 28px rgba(0, 255, 128, 0.65) !important;
     }}
 
     .speaking-active .avatar-photo {{
@@ -265,8 +264,8 @@ sketch_layout_html = f"""
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 24px;
-        background: linear-gradient(transparent, rgba(0,0,0,0.9));
+        height: 28px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.92));
         display: flex;
         align-items: flex-end;
         justify-content: center;
@@ -286,7 +285,7 @@ sketch_layout_html = f"""
 
     @keyframes waveMotion {{
         0% {{ height: 4px; }}
-        50% {{ height: 16px; }}
+        50% {{ height: 18px; }}
         100% {{ height: 4px; }}
     }}
 
@@ -297,189 +296,172 @@ sketch_layout_html = f"""
     .speaking-wave .bar:nth-child(4) {{ animation: waveMotion 0.45s infinite ease-in-out 0.15s; }}
     .speaking-wave .bar:nth-child(5) {{ animation: waveMotion 0.55s infinite ease-in-out 0.05s; }}
 
-    /* Right Controls Container */
-    .controls-grid-container {{
+    /* Right 25% Section: Action Controls */
+    .controls-column {{
         flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 8px;
     }}
 
-    .header-status {{
-        display: flex;
+    .status-badge {{
+        display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: rgba(255,255,255,0.05);
-        padding: 3px 8px;
-        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 4px 10px;
+        border-radius: 10px;
         width: fit-content;
-    }}
-
-    .dot-live {{
-        color: #00ff80;
+        border: 1px solid rgba(255, 255, 255, 0.08);
         font-size: 11px;
-    }}
-
-    .title-text {{
-        color: #f1f5f9;
-        font-size: 12px;
         font-weight: 700;
-        letter-spacing: 0.5px;
+        color: #e2e8f0;
     }}
 
-    .icon-grid {{
+    .pulse-dot {{
+        color: #00ff80;
+        font-size: 10px;
+    }}
+
+    .actions-grid {{
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 5px;
+        gap: 6px;
     }}
 
-    .grid-btn {{
-        padding: 6px 4px;
-        border-radius: 8px;
+    .pro-btn {{
+        padding: 7px 6px;
+        border-radius: 9px;
         font-size: 11px;
         font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 3px;
+        gap: 4px;
         border: 1px solid transparent;
         transition: all 0.2s ease;
     }}
 
-    .btn-num {{
-        font-size: 10px;
-        opacity: 0.75;
-    }}
-
     .btn-zoom {{
-        background: #1e293b;
+        background: #182235;
         color: #38bdf8;
-        border-color: #38bdf8;
+        border-color: #2563eb;
     }}
     .btn-zoom:hover {{
-        background: #38bdf8;
-        color: #0f172a;
+        background: #2563eb;
+        color: #fff;
     }}
 
-    .btn-push {{
-        background: #3b1414;
+    .btn-pause {{
+        background: #331417;
         color: #f87171;
-        border-color: #ef4444;
+        border-color: #dc2626;
     }}
-    .btn-push:hover {{
-        background: #ef4444;
+    .btn-pause:hover {{
+        background: #dc2626;
         color: #fff;
     }}
 
-    .btn-cam {{
-        background: #1e293b;
+    .btn-camera {{
+        background: #262016;
         color: #fbbf24;
-        border-color: #f59e0b;
+        border-color: #d97706;
     }}
-    .btn-cam:hover {{
-        background: #f59e0b;
-        color: #0f172a;
+    .btn-camera:hover {{
+        background: #d97706;
+        color: #000;
     }}
 
-    .btn-gear {{
-        background: #1e293b;
-        color: #a78bfa;
-        border-color: #8b5cf6;
+    .btn-settings {{
+        background: #201a33;
+        color: #c084fc;
+        border-color: #7c3aed;
     }}
-    .btn-gear:hover {{
-        background: #8b5cf6;
+    .btn-settings:hover {{
+        background: #7c3aed;
         color: #fff;
     }}
 
-    /* ⑤ Wide Mic & Speaker Bar */
-    .mic-speaker-bar {{
-        margin-top: 8px;
+    /* Full Action Strip */
+    .action-strip {{
+        margin-top: 9px;
         text-align: center;
     }}
 
-    .wide-mic-btn {{
+    .mic-trigger-btn {{
         width: 100%;
         background: linear-gradient(90deg, #ff4b4b, #e02424);
         color: #fff;
         border: none;
-        padding: 9px 12px;
-        border-radius: 20px;
+        padding: 10px 14px;
+        border-radius: 22px;
         font-size: 13px;
         font-weight: 700;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(255,75,75,0.35);
+        box-shadow: 0 4px 14px rgba(255, 75, 75, 0.35);
         transition: all 0.2s ease;
     }}
-    .wide-mic-btn:hover {{
+    .mic-trigger-btn:hover {{
         transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(255,75,75,0.5);
+        box-shadow: 0 6px 18px rgba(255, 75, 75, 0.5);
     }}
 
-    .mic-status-msg {{
+    .mic-hint-text {{
         font-size: 11px;
         color: #94a3b8;
-        margin-top: 3px;
+        margin-top: 4px;
         margin-bottom: 0;
     }}
 </style>
 
 <script>
-    const wrapper = document.getElementById('masterSketchContainer');
+    const wrapper = document.getElementById('masterHeader');
     const zoomBtn = document.getElementById('zoomBtn');
     const avatar = document.getElementById('avatarFrame');
-    const statusText = document.getElementById('statusText');
+    const statusLabel = document.getElementById('statusLabel');
     const wave = document.getElementById('waveOverlay');
     const autoMicBtn = document.getElementById('autoMic');
     const micStatus = document.getElementById('micState');
 
     let isZoomed = false;
 
-    // ① ज़ूम इन / ज़ूम आउट टॉगल
+    // 1-Click Zoom Toggle
     function toggleZoom() {{
         isZoomed = !isZoomed;
         if (isZoomed) {{
             wrapper.classList.add('full-zoom-mode');
-            zoomBtn.innerHTML = '<span class="btn-num">①</span> ✕ छोटा करें';
+            zoomBtn.innerText = '✕ छोटा करें';
             zoomBtn.style.color = '#fff';
             zoomBtn.style.borderColor = '#fff';
         }} else {{
             wrapper.classList.remove('full-zoom-mode');
-            zoomBtn.innerHTML = '<span class="btn-num">①</span> ⛶ ज़ूम इन';
+            zoomBtn.innerText = '⛶ ज़ूम इन';
             zoomBtn.style.color = '#38bdf8';
-            zoomBtn.style.borderColor = '#38bdf8';
+            zoomBtn.style.borderColor = '#2563eb';
         }}
     }}
 
-    // ② पुश (बीच में बोलना रोकें)
+    // Push / Speech Stop Interruption
     function interruptSpeech() {{
         if ('speechSynthesis' in window) {{
             window.speechSynthesis.cancel();
         }}
         avatar.classList.remove('speaking-card', 'speaking-active');
         wave.classList.remove('speaking-wave');
-        statusText.innerText = 'खुशी Live | शांत';
+        statusLabel.innerText = 'Khushi Live | शांत';
     }}
 
-    // ③ कैमरा स्क्रोल/ओपनर
-    function triggerCameraExpander() {{
-        const exp = window.parent.document.querySelector('details[data-testid="stExpander"]');
-        if (exp) {{
-            exp.open = true;
-            exp.scrollIntoView({{ behavior: 'smooth' }});
+    // Toggle Camera & Settings Floating Panels
+    function toggleToolsModal(toolId) {{
+        const target = window.parent.document.getElementById(toolId);
+        if (target) {{
+            target.style.display = target.style.display === 'none' ? 'block' : 'none';
+            target.scrollIntoView({{ behavior: 'smooth' }});
         }}
     }}
 
-    // ④ सेटिंग्स ओपनर
-    function triggerSettingsExpander() {{
-        const expanders = window.parent.document.querySelectorAll('details[data-testid="stExpander"]');
-        if (expanders.length > 1) {{
-            expanders[1].open = true;
-            expanders[1].scrollIntoView({{ behavior: 'smooth' }});
-        }}
-    }}
-
-    // ⑤ माइक व वॉइस रिकग्निशन
+    // One-Touch Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     function unlockAudio() {{
@@ -518,7 +500,7 @@ sketch_layout_html = f"""
                     if (sendBtn) {{
                         sendBtn.click();
                     }} else {{
-                        input.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }}));
+                        input.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
                     }}
                 }}, 300);
             }}
@@ -536,19 +518,19 @@ sketch_layout_html = f"""
         if (event.data.type === 'START_SPEAKING') {{
             avatar.classList.add('speaking-card', 'speaking-active');
             wave.classList.add('speaking-wave');
-            statusText.innerText = '🗣️ बोल रही है...';
+            statusLabel.innerText = '🗣️ बोल रही है...';
         }} else if (event.data.type === 'STOP_SPEAKING') {{
             avatar.classList.remove('speaking-card', 'speaking-active');
             wave.classList.remove('speaking-wave');
-            statusText.innerText = 'खुशी Live | तैयार है';
+            statusLabel.innerText = 'Khushi Live | तैयार है';
         }}
     }});
 </script>
 """
 
-# Render Sketch Layout as Fixed Header
-st.markdown('<div class="sketch-header-box">', unsafe_allow_html=True)
-st.components.v1.html(sketch_layout_html, height=195)
+# Render Sticky Top 50% Section
+st.markdown('<div class="sticky-header-panel">', unsafe_allow_html=True)
+st.components.v1.html(pro_header_html, height=210)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # Voice Dispatcher
@@ -589,29 +571,34 @@ def speak_and_animate(text):
     """
     st.components.v1.html(js_code, height=0)
 
-# 6. Expandable Tools (③ कैमरा व स्कैनर & ④ सेटिंग्स)
+# 6. Integrated Tool Popups (Camera & Settings - No Duplication)
 active_image = None
-with st.expander("📷 ③ कैमरा स्कैन व चार्ट अपलोडर", expanded=False):
+with st.container():
+    st.markdown('<div id="cameraModal" style="display:none; padding:10px; background:#131826; border-radius:12px; margin-bottom:8px; border:1px solid #28334f;">', unsafe_allow_html=True)
+    st.markdown("<p style='font-size:12px; color:#fbbf24; font-weight:bold; margin-bottom:6px;'>📷 कैमरा स्कैन या चार्ट फ़ोटो अपलोड करें:</p>", unsafe_allow_html=True)
     col_c1, col_c2 = st.columns([1, 1])
     with col_c1:
-        cam_shot = st.camera_input("कैमरा स्कैन", label_visibility="collapsed")
+        cam_shot = st.camera_input("कैमरा", label_visibility="collapsed")
     with col_c2:
-        file_doc = st.file_uploader("चार्ट या गैलरी फोटो", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+        file_doc = st.file_uploader("गैलरी / चार्ट", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
     active_image = cam_shot if cam_shot else file_doc
+    st.markdown('</div>', unsafe_allow_html=True)
 
-with st.expander("⚙️ ④ सेटिंग्स व मेमोरी", expanded=False):
-    st.info("💡 शेयर मार्केट तकनीकी विश्लेषण, वैदिक गणित और मेमोरी मैनेजमेंट।")
+with st.container():
+    st.markdown('<div id="settingsModal" style="display:none; padding:10px; background:#131826; border-radius:12px; margin-bottom:8px; border:1px solid #28334f;">', unsafe_allow_html=True)
+    st.markdown("<p style='font-size:12px; color:#c084fc; font-weight:bold; margin-bottom:4px;'>⚙️ सिस्टम टूल्स व मेमोरी:</p>", unsafe_allow_html=True)
     if st.button("🗑️ चैट हिस्ट्री साफ़ करें"):
         st.session_state.messages = []
         save_memory([])
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# 7. Chat Messages Display Window
+# 7. Clean Chat Messages History Display
 for msg in st.session_state.messages[-4:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Intelligent Multi-Model Cascade (1,500 RPD Shield - Never Stops)
+# Multi-Model Smart Cascade (1,500 RPD Shield - Never Stops)
 def execute_gemini_query(prompt, image_file):
     models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash']
     
@@ -643,7 +630,7 @@ def execute_gemini_query(prompt, image_file):
     return "माफ़ कीजिए, सर्वर व्यस्त है। कृपया पुनः प्रयास करें।"
 
 # Bottom Input Bar (Sticky above keypad)
-user_prompt = st.chat_input("यहाँ लिखें या ऊपर ⑤ माइक बटन दबाकर बोलें...")
+user_prompt = st.chat_input("यहाँ लिखें या माइक बटन दबाकर बोलें...")
 
 if user_prompt or (active_image is not None and st.button("🔍 इस इमेज का तुरंत विश्लेषण करें")):
     query = user_prompt if user_prompt else "कृपया इस तस्वीर का विश्लेषण करके मुझे बताएं।"
