@@ -34,12 +34,64 @@ def apply_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
-def render_zoom_mode(media_src):
-    st.markdown(f"""
-    <div style="width:100%; height:62vh; max-height:480px; background:#070913; border-radius:12px; border:2px solid #00ff80; display:flex; align-items:center; justify-content:center; padding:4px; box-sizing:border-box; margin-bottom:6px;">
-        <canvas id="khushiCanvasZoom" style="width:100%; height:100%; border-radius:10px; object-fit:cover;"></canvas>
-    </div>
+def render_zoom_mode(img_b64, clean_speak):
+    # 1:1 स्क्वायर ज़ूम में 2.5D मेश
+    mesh_zoom_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"/><style>* {{ margin:0; padding:0; box-sizing:border-box; }}</style></head>
+    <body style="background:transparent; overflow:hidden; display:flex; justify-content:center; align-items:center;">
+        <canvas id="zoomCanvas" style="width:100%; height:100%; object-fit:cover; border-radius:10px;"></canvas>
+        <script>
+            const canvas = document.getElementById('zoomCanvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.src = "{img_b64}";
+            let isSpeaking = false;
+            let jawOffset = 0;
+            
+            img.onload = () => {{
+                canvas.width = img.naturalWidth || 400;
+                canvas.height = img.naturalHeight || 500;
+                function loop() {{
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    if (isSpeaking && jawOffset > 0.5) {{
+                        const mY = canvas.height * 0.60;
+                        const mH = canvas.height * 0.25;
+                        ctx.drawImage(img, 0, mY, canvas.width, mH, 0, mY + (jawOffset * 0.8), canvas.width, mH + jawOffset);
+                    }}
+                    requestAnimationFrame(loop);
+                }}
+                loop();
+            }};
+            
+            const txt = "{clean_speak}";
+            if (txt && 'speechSynthesis' in window) {{
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(txt);
+                u.lang = 'hi-IN';
+                let mouthInt = null;
+                u.onstart = () => {{
+                    isSpeaking = true;
+                    mouthInt = setInterval(() => {{ jawOffset = (Math.sin(Date.now() * 0.02) + 1) * 3.5; }}, 40);
+                }};
+                u.onend = u.onerror = () => {{
+                    isSpeaking = false;
+                    jawOffset = 0;
+                    if (mouthInt) clearInterval(mouthInt);
+                }};
+                setTimeout(() => window.speechSynthesis.speak(u), 100);
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    st.markdown("""
+    <div style="width:100%; height:62vh; max-height:480px; background:#070913; border-radius:12px; border:2px solid #00ff80; display:flex; align-items:center; justify-content:center; padding:4px; box-sizing:border-box; margin-bottom:6px; box-shadow:0 0 18px rgba(0,255,128,0.35);">
     """, unsafe_allow_html=True)
+    st.components.v1.html(mesh_zoom_html, height=460)
+    st.markdown("</div>", unsafe_allow_html=True)
     
     col_z1, col_z2 = st.columns(2)
     with col_z1:
@@ -51,15 +103,76 @@ def render_zoom_mode(media_src):
             st.session_state.clean_speak = ""
             st.rerun()
 
-def render_standard_mode(media_src, save_mem_callback):
+def render_standard_mode(img_b64, clean_speak, save_mem_callback):
     master_col_left, master_col_right = st.columns([52, 48])
     
     with master_col_left:
-        st.markdown(f"""
-        <div id="avatarFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:transform 0.1s ease, border-color 0.2s ease;">
-            <canvas id="khushiCanvas" style="width:100%; height:100%; object-fit:cover; display:block;"></canvas>
-        </div>
-        """, unsafe_allow_html=True)
+        # बायाँ 52% हिस्सा: 2.5D मेश कैनवास + लिप-सिंक (सेल्फ-कंटेंड, 0% एरर)
+        mesh_avatar_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"/><style>* {{ margin:0; padding:0; box-sizing:border-box; }}</style></head>
+        <body style="background:transparent; overflow:hidden;">
+            <div id="box" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:border-color 0.2s ease, box-shadow 0.2s ease;">
+                <canvas id="kCanvas" style="width:100%; height:100%; object-fit:cover; display:block;"></canvas>
+            </div>
+            <script>
+                const canvas = document.getElementById('kCanvas');
+                const box = document.getElementById('box');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.src = "{img_b64}";
+                let isSpeaking = false;
+                let jawOffset = 0;
+                
+                img.onload = () => {{
+                    canvas.width = img.naturalWidth || 400;
+                    canvas.height = img.naturalHeight || 500;
+                    function loop() {{
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        // वोकल लिप सिंक (जबड़ा और निचला होंठ हिलना)
+                        if (isSpeaking && jawOffset > 0.5) {{
+                            const mY = canvas.height * 0.60;
+                            const mH = canvas.height * 0.25;
+                            ctx.drawImage(img, 0, mY, canvas.width, mH, 0, mY + (jawOffset * 0.8), canvas.width, mH + jawOffset);
+                        }}
+                        requestAnimationFrame(loop);
+                    }}
+                    loop();
+                }};
+                
+                const txt = "{clean_speak}";
+                if (txt && 'speechSynthesis' in window) {{
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(txt);
+                    u.lang = 'hi-IN';
+                    u.rate = 1.0;
+                    let mouthInt = null;
+                    
+                    u.onstart = () => {{
+                        isSpeaking = true;
+                        box.style.borderColor = '#00ff80';
+                        box.style.boxShadow = '0 0 25px rgba(0,255,128,0.5)';
+                        mouthInt = setInterval(() => {{ jawOffset = (Math.sin(Date.now() * 0.02) + 1) * 3.5; }}, 40);
+                    }};
+                    
+                    u.onend = u.onerror = () => {{
+                        isSpeaking = false;
+                        jawOffset = 0;
+                        if (mouthInt) clearInterval(mouthInt);
+                        box.style.borderColor = '#ff4b4b';
+                        box.style.boxShadow = '0 0 18px rgba(255,75,75,0.35)';
+                    }};
+                    
+                    setTimeout(() => window.speechSynthesis.speak(u), 100);
+                }}
+            </script>
+        </body>
+        </html>
+        """
+        st.components.v1.html(mesh_avatar_html, height=315)
         
         col_bl, col_br = st.columns(2)
         with col_bl:
@@ -119,9 +232,9 @@ def render_standard_mode(media_src, save_mem_callback):
             st.session_state.cam_on = not st.session_state.cam_on
             st.rerun()
             
-        # 3. इन-प्लेस कैमरा बॉक्स (प्रोएक्टिव विज़न)
+        # 3. इन-प्लेस कैमरा बॉक्स (विज़न सक्रिय)
         if st.session_state.cam_on:
-            st.camera_input("लाइव कैमरा (विज़न एक्टिव)", label_visibility="collapsed", key="in_cam")
+            st.camera_input("लाइव कैमरा", label_visibility="collapsed", key="in_cam")
         else:
             st.markdown("""
             <div style="width:100%; height:88px; background:#07080f; border-radius:10px; border:1px dashed #2e3856; display:flex; align-items:center; justify-content:center;">
@@ -143,85 +256,3 @@ def render_standard_mode(media_src, save_mem_callback):
             save_mem_callback()
             st.success("मेमोरी रीसेट हो गई!")
             st.rerun()
-
-def init_mesh_canvas_engine(img_b64, clean_speak):
-    st.components.v1.html(f"""
-    <script>
-        const win = window.parent || window;
-        const doc = win.document;
-        
-        let canvas = doc.getElementById('khushiCanvas');
-        if (!canvas) canvas = doc.getElementById('khushiCanvasZoom');
-        
-        if (canvas) {{
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.src = "{img_b64}";
-            
-            let isSpeaking = false;
-            let jawOffset = 0;
-            
-            img.onload = () => {{
-                canvas.width = img.naturalWidth || 400;
-                canvas.height = img.naturalHeight || 500;
-                startRenderLoop();
-            }};
-            
-            function startRenderLoop() {{
-                let tick = 0;
-                function loop() {{
-                    tick++;
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    
-                    if (isSpeaking && jawOffset > 1) {{
-                        const mouthY = canvas.height * 0.62;
-                        const mouthH = canvas.height * 0.22;
-                        ctx.drawImage(
-                            img,
-                            0, mouthY, canvas.width, mouthH,
-                            0, mouthY + (jawOffset * 0.8), canvas.width, mouthH + jawOffset
-                        );
-                    }}
-                    requestAnimationFrame(loop);
-                }}
-                loop();
-            }}
-            
-            const toSpeak = "{clean_speak}";
-            if (toSpeak && toSpeak.length > 0 && 'speechSynthesis' in win) {{
-                win.speechSynthesis.cancel();
-                const u = new win.SpeechSynthesisUtterance(toSpeak);
-                u.lang = 'hi-IN';
-                u.rate = 1.0;
-                
-                let mouthInterval = null;
-                u.onstart = () => {{
-                    isSpeaking = true;
-                    const frame = doc.getElementById('avatarFrame');
-                    if (frame) {{
-                        frame.style.borderColor = '#00ff80';
-                        frame.style.boxShadow = '0 0 25px rgba(0,255,128,0.5)';
-                    }}
-                    mouthInterval = setInterval(() => {{
-                        jawOffset = (Math.sin(Date.now() * 0.02) + 1) * 3.5;
-                    }}, 40);
-                }};
-                
-                u.onend = () => {{
-                    isSpeaking = false;
-                    jawOffset = 0;
-                    if (mouthInterval) clearInterval(mouthInterval);
-                    const frame = doc.getElementById('avatarFrame');
-                    if (frame) {{
-                        frame.style.borderColor = '#ff4b4b';
-                        frame.style.boxShadow = '0 0 18px rgba(255,75,75,0.35)';
-                    }}
-                }};
-                u.onerror = u.onend;
-                setTimeout(() => {{ win.speechSynthesis.speak(u); }}, 100);
-            }}
-        }}
-    </script>
-    """, height=0)
-          
