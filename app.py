@@ -73,26 +73,30 @@ def save_mem():
             json.dump(st.session_state.messages, f, ensure_ascii=False)
     except Exception: pass
 
-# वॉइस या कीबोर्ड से आया इनपुट स्वीकार करने का सेशन-स्टेट
-if "voice_query" not in st.session_state:
-    st.session_state.voice_query = ""
-
 # जो अंतिम उत्तर बोलना है
 last_answer = ""
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
     last_answer = st.session_state.messages[-1]["content"]
 clean_speak = re.sub(r'[*#~`_+=|\\<>]', ' ', last_answer).replace('"', ' ').replace("'", " ").strip()
 
-# 4. फ्रोज़न लेआउट + सेल्फ-कंटेंड आईफ्रेम (जो क्रैश नहीं होगा)
-st.components.v1.html(f"""
+# मीडिया टैग तैयार करना
+if has_vid:
+    media_norm_html = f'<video id="kMediaNorm" src="{media_src}" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>'
+    media_zoom_html = f'<video id="kMediaZoom" src="{media_src}" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 15%;"></video>'
+else:
+    media_norm_html = f'<img id="kMediaNorm" src="{media_src}" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />'
+    media_zoom_html = f'<img id="kMediaZoom" src="{media_src}" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />'
+
+# 4. फ्रोज़न HTML टेम्पलेट (बिना f-string के ताकि SyntaxError कभी न आए)
+html_template = """
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8" />
 <style>
-    * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }}
-    @keyframes breathe {{ 0%{{transform:scale(1);}} 50%{{transform:scale(1.02) translateY(-1px);}} 100%{{transform:scale(1);}} }}
-    @keyframes bounce {{ 0%{{height:4px;}} 100%{{height:18px;}} }}
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    @keyframes breathe { 0%{transform:scale(1);} 50%{transform:scale(1.02) translateY(-1px);} 100%{transform:scale(1);} }
+    @keyframes bounce { 0%{height:4px;} 100%{height:18px;} }
 </style>
 </head>
 <body style="background:#0a0c16; padding:8px; border-radius:14px; border:1px solid #1e2640; overflow:hidden;">
@@ -102,8 +106,7 @@ st.components.v1.html(f"""
     <!-- बायाँ 52%: विज़ुअल + लिप-सिंक + Puss & Zoom -->
     <div style="width:52%; display:flex; flex-direction:column; gap:6px;">
         <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:transform 0.2s ease, border-color 0.2s ease;">
-            {'<video id="kMediaNorm" src="' + media_src + '" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>' if has_vid else '<img id="kMediaNorm" src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />'}
-            
+            __MEDIA_NORM__
             <div id="voiceWave" style="position:absolute; bottom:6px; left:50%; transform:translateX(-50%); display:none; gap:3px; align-items:flex-end; height:18px;">
                 <div style="width:3px; height:8px; background:#00ff80; border-radius:2px; animation:bounce 0.4s infinite alternate;"></div>
                 <div style="width:3px; height:16px; background:#00ff80; border-radius:2px; animation:bounce 0.3s infinite alternate;"></div>
@@ -158,7 +161,7 @@ st.components.v1.html(f"""
     </button>
 
     <div style="width:260px; height:260px; background:#000; border:2px solid #00ff80; border-radius:14px; overflow:hidden; box-shadow:0 0 25px rgba(0,255,128,0.5); display:flex; align-items:center; justify-content:center;">
-        {'<video id="kMediaZoom" src="' + media_src + '" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 15%;"></video>' if has_vid else '<img id="kMediaZoom" src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />'}
+        __MEDIA_ZOOM__
     </div>
 
     <div style="display:flex; gap:10px; width:260px; margin-top:16px;">
@@ -223,7 +226,6 @@ st.components.v1.html(f"""
             const clrBtn = pDoc.getElementById('hiddenClearTrigger');
             if (clrBtn) { clrBtn.click(); return; }
         } catch(e) {}
-        // फ़ॉलबैक
         window.location.reload();
     }
 
@@ -294,7 +296,7 @@ st.components.v1.html(f"""
     }
 
     // 7. ऑटो-स्पीकर व लिप-सिंक
-    const toSpeak = "{clean_speak}";
+    const toSpeak = "__CLEAN_SPEAK__";
     if (toSpeak && toSpeak.length > 0 && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(toSpeak);
@@ -311,9 +313,16 @@ st.components.v1.html(f"""
 </script>
 </body>
 </html>
-""", height=385)
+"""
 
-# हिडन मेमोरी क्लियर बटन (सुरक्षित और बिना यूआरएल क्रैश के)
+# प्लेसहॉल्डर्स को वास्तविक मानों से बदलना
+final_html = html_template.replace("__MEDIA_NORM__", media_norm_html)\
+                          .replace("__MEDIA_ZOOM__", media_zoom_html)\
+                          .replace("__CLEAN_SPEAK__", clean_speak)
+
+st.components.v1.html(final_html, height=385)
+
+# हिडन मेमोरी क्लियर ट्रिगर
 st.markdown('<div style="display:none;">', unsafe_allow_html=True)
 if st.button("ClrTrig", key="hiddenClearTrigger"):
     st.session_state.messages = []
@@ -353,7 +362,7 @@ def ask_gemini(prompt):
         return f"सर्वर से संपर्क नहीं हो सका: {str(e)[:40]}"
     return "माफ़ कीजिए, उत्तर प्राप्त नहीं हुआ। कृपया पुनः प्रयास करें।"
 
-# 7. चैट इनपुट (कीपैड या माइक)
+# 7. चैट इनपुट
 user_query = st.chat_input("यहाँ लिखें या ऊपर mike बटन दबाकर बोलें...")
 
 if user_query:
