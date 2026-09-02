@@ -2,18 +2,19 @@ import streamlit as st
 import json, os, re, base64
 from datetime import datetime, timezone, timedelta
 from PIL import Image
+import io
 from google import genai
 from google.genai import types
 
-# 1. पेज कॉन्फ़िगरेशन
+# 1. पेज कॉन्फ़िगरेशन (डिज़ाइन 100% फ्रोज़न)
 st.set_page_config(page_title="Khushi AI", page_icon="🌸", layout="wide")
 
 st.markdown("""
 <style>
-    .block-container { padding: 0.2rem 0.4rem 4.5rem 0.4rem !important; max-width: 100% !important; }
+    .block-container { padding: 0.2rem 0.4rem 4rem 0.4rem !important; max-width: 100% !important; }
     header, footer, #MainMenu { visibility: hidden !important; }
     
-    /* टॉप स्टेटस बार */
+    /* ऊपर चमकने वाला थिंकिंग स्टेटस */
     .thinking-badge {
         background: linear-gradient(90deg, rgba(0,255,128,0.2), rgba(56,189,248,0.2));
         border: 1px solid #00ff80;
@@ -52,7 +53,7 @@ client = genai.Client(api_key=API_KEY) if API_KEY else None
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
 PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल, सटीक और स्पष्ट हिंदी में उत्तर दो।"
 
-# मेमोरी व स्टेट्स
+# मेमोरी प्रबंधन
 if "messages" not in st.session_state:
     if os.path.exists("khushi_memory.json"):
         try:
@@ -67,24 +68,14 @@ def save_mem():
             json.dump(st.session_state.messages, f, ensure_ascii=False)
     except Exception: pass
 
-# स्टेटस फ्लैग्स (शुरुआत में सब कुछ 100% बंद रहेगा)
-if "show_cam" not in st.session_state: st.session_state.show_cam = False
-if "show_set" not in st.session_state: st.session_state.show_set = False
-
-# URL से टॉगल स्वीकार करें
-qp = st.query_params.get("action", "")
-if qp == "cam":
-    st.session_state.show_cam = not st.session_state.show_cam
-    st.session_state.show_set = False
-    st.query_params.clear()
-    st.rerun()
-elif qp == "set":
-    st.session_state.show_set = not st.session_state.show_set
-    st.session_state.show_cam = False
+# URL Action Receiver (इनलाइन सेटिंग के 1-क्लिक ट्रिगर के लिए)
+if st.query_params.get("action") == "clear":
+    st.session_state.messages = []
+    save_mem()
     st.query_params.clear()
     st.rerun()
 
-# 4. फ्रोज़न लेआउट: बायाँ 52% पोर्ट्रेट + दायाँ स्विचेस + 1:1 स्क्वायर ज़ूम
+# 4. फ्रोज़न लेआउट + इन-प्लेस लाइव कैमरा + इनलाइन कॉम्पैक्ट सेटिंग्स
 st.components.v1.html(f"""
 <div id="masterBoard" style="width:100%; box-sizing:border-box; background:#0a0c16; padding:8px; border-radius:14px; border:1px solid #1e2640; position:relative; overflow:hidden;">
     
@@ -107,25 +98,37 @@ st.components.v1.html(f"""
             </div>
         </div>
 
-        <!-- दायाँ 48%: स्विचेस (कैमरा, माइक, सेटिंग) -->
-        <div id="switchesPanel" style="width:48%; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
+        <!-- दायाँ 48%: स्विचेस + बीच की खाली जगह में इन-प्लेस लाइव कैमरा + इनलाइन सेटिंग्स -->
+        <div id="switchesPanel" style="width:48%; display:flex; flex-direction:column; justify-content:space-between; gap:6px;">
             <!-- 1. कैमरा ON - OFF स्विच -->
-            <button onclick="navAction('cam')" style="width:100%; background:#221b0e; color:#facc15; border:1px solid #ca8a04; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
+            <button id="camToggleBtn" onclick="toggleInternalCam()" style="width:100%; background:#221b0e; color:#facc15; border:1px solid #ca8a04; padding:9px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                 📷 कैमरा on — off
             </button>
 
-            <!-- 2. mike - spiker (बोलने के लिए) -->
-            <div style="display:flex; flex-direction:column; align-items:center;">
-                <button id="micBtn" style="width:100%; background:#ff4b4b; color:white; border:none; padding:15px 2px; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(255,75,75,0.45);">
-                    🎙️ mike - spiker (बोलें)
-                </button>
-                <span id="micStatus" style="font-size:10px; color:#9ca3af; margin-top:4px;">माइक व स्पीकर एक्टिव</span>
+            <!-- बीच का रिक्त हिस्सा: इन-प्लेस लाइव कैमरा विंडो -->
+            <div id="inlineCamBox" style="width:100%; height:88px; background:#07080f; border-radius:10px; border:1px dashed #2e3856; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center;">
+                <video id="liveVideoFeed" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; display:none;"></video>
+                <span id="camPlaceholderText" style="color:#555f7d; font-size:10px; text-align:center; padding:4px;">कैमरा स्टैंडबाय (OFF)</span>
             </div>
 
-            <!-- 3. सेटिंग स्विच -->
-            <button onclick="navAction('set')" style="width:100%; background:#1c172d; color:#c084fc; border:1px solid #9333ea; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
-                ⚙️ सेटिंग
-            </button>
+            <!-- 2. mike - spiker (बोलने के लिए) -->
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <button id="micBtn" style="width:100%; background:#ff4b4b; color:white; border:none; padding:12px 2px; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(255,75,75,0.45);">
+                    🎙️ mike - spiker (बोलें)
+                </button>
+                <span id="micStatus" style="font-size:10px; color:#9ca3af; margin-top:2px;">माइक व स्पीकर एक्टिव</span>
+            </div>
+
+            <!-- 3. इनलाइन कॉम्पैक्ट सेटिंग्स विकल्प (बिना किसी फैलाव के) -->
+            <div style="width:100%; background:#131526; border:1px solid #7c3aed; border-radius:10px; padding:5px 4px; box-sizing:border-box;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:0 2px;">
+                    <span style="color:#c084fc; font-size:10.5px; font-weight:bold;">⚙️ सेटिंग</span>
+                    <span style="color:#10b981; font-size:9px;">● 3.6 Flash</span>
+                </div>
+                <button onclick="clearMemoryDirect()" style="width:100%; background:#28152e; color:#f472b6; border:1px solid #db2777; padding:5px 2px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;">
+                    🗑️ मेमोरी साफ़ करें
+                </button>
+            </div>
         </div>
     </div>
 
@@ -160,7 +163,52 @@ st.components.v1.html(f"""
     const squareOverlay = document.getElementById('squareZoomOverlay');
     const micStatus = document.getElementById('micStatus');
     const micBtn = document.getElementById('micBtn');
+    const liveVideo = document.getElementById('liveVideoFeed');
+    const camBox = document.getElementById('inlineCamBox');
+    const camPlaceholder = document.getElementById('camPlaceholderText');
+    const camBtn = document.getElementById('camToggleBtn');
 
+    let camStream = null;
+
+    // 1. इन-प्लेस लाइव कैमरा टॉगल (उसी निर्धारित काले हिस्से में)
+    async function toggleInternalCam() {{
+        if (camStream) {{
+            camStream.getTracks().forEach(track => track.stop());
+            camStream = null;
+            liveVideo.style.display = 'none';
+            camPlaceholder.style.display = 'block';
+            camPlaceholder.innerText = 'कैमरा स्टैंडबाय (OFF)';
+            camBox.style.borderColor = '#2e3856';
+            camBtn.style.background = '#221b0e';
+            camBtn.style.color = '#facc15';
+            camBtn.innerText = '📷 कैमरा on — off';
+        }} else {{
+            try {{
+                camStream = await navigator.mediaDevices.getUserMedia({{
+                    video: {{ facingMode: "user", width: {{ ideal: 320 }}, height: {{ ideal: 240 }} }},
+                    audio: false
+                }});
+                liveVideo.srcObject = camStream;
+                liveVideo.style.display = 'block';
+                camPlaceholder.style.display = 'none';
+                camBox.style.borderColor = '#00ff80';
+                camBtn.style.background = '#0d2818';
+                camBtn.style.color = '#00ff80';
+                camBtn.innerText = '📷 कैमरा (LIVE ON)';
+            }} catch(err) {{
+                camPlaceholder.innerText = 'कैमरा अनुमति दें';
+            }}
+        }}
+    }}
+
+    // 2. इनलाइन 1-क्लिक मेमोरी साफ़
+    function clearMemoryDirect() {{
+        const url = new URL(window.parent.location.href);
+        url.searchParams.set('action', 'clear');
+        window.parent.location.href = url.toString();
+    }}
+
+    // 3. Zoom Toggle
     function enterSquareZoom() {{
         squareOverlay.style.display = 'flex';
         const pDoc = window.parent.document;
@@ -179,6 +227,7 @@ st.components.v1.html(f"""
         if (cCard) cCard.style.display = 'block';
     }}
 
+    // 4. Puss (तुरंत म्यूट)
     function pussSpeech() {{
         try {{
             window.speechSynthesis.cancel();
@@ -187,13 +236,7 @@ st.components.v1.html(f"""
         micStatus.innerText = 'शांत';
     }}
 
-    function navAction(act) {{
-        const url = new URL(window.parent.location.href);
-        url.searchParams.set('action', act);
-        window.parent.location.href = url.toString();
-    }}
-
-    // 100% एक्टिव वॉयस इंजन
+    // 5. वॉयस इंजन
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || (window.parent && (window.parent.SpeechRecognition || window.parent.webkitSpeechRecognition));
     let rec = null;
     if (SpeechRec) {{
@@ -238,39 +281,10 @@ st.components.v1.html(f"""
 </script>
 """, height=385)
 
-# नंबर 4: सर्चिंग/थिंकिंग स्टेटस ऊपर ही रहेगा
+# शीर्ष थिंकिंग प्लेसहोल्डर
 thinking_box = st.empty()
 
-# नंबर 1: कैमरा ऑन-ऑफ (जब तक बटन नहीं दबेगा, कोड 0% रेंडर होगा - शून्य खाली पट्टी)
-active_image = None
-if st.session_state.show_cam:
-    st.markdown('<div style="background:#141724; padding:10px; border-radius:10px; margin:6px 0; border:1px solid #ca8a04;">', unsafe_allow_html=True)
-    st.markdown("<span style='color:#facc15; font-size:12px; font-weight:bold;'>📷 कैमरा व स्कैनर एक्टिव है (बंद करने के लिए पुनः स्विच दबाएँ):</span>", unsafe_allow_html=True)
-    col_c1, col_c2 = st.columns(2)
-    with col_c1: cam_shot = st.camera_input("कैमरा स्कैन", label_visibility="collapsed")
-    with col_c2: file_doc = st.file_uploader("चार्ट अपलोड", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-    active_image = cam_shot if cam_shot else file_doc
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# नंबर 2: सेटिंग्स (जब तक बटन नहीं दबेगा, कोड 0% रेंडर होगा)
-if st.session_state.show_set:
-    st.markdown('<div style="background:#181628; padding:12px; border-radius:10px; margin:6px 0; border:1px solid #9333ea;">', unsafe_allow_html=True)
-    st.markdown("<b style='color:#c084fc; font-size:13px;'>⚙️ सिस्टम सेटिंग्स व टूल्स:</b>", unsafe_allow_html=True)
-    col_s1, col_s2 = st.columns(2)
-    with col_s1:
-        if st.button("🗑️ चैट मेमोरी साफ़ करें", use_container_width=True):
-            st.session_state.messages = []
-            save_mem()
-            st.success("मेमोरी साफ़ हो गई!")
-            st.rerun()
-    with col_s2:
-        if st.button("✕ सेटिंग्स बंद करें", use_container_width=True):
-            st.session_state.show_set = False
-            st.rerun()
-    st.caption("🟢 एक्टिव AI मॉडल: **Gemini 3.6 Flash** (सुपर-फ़ास्ट टर्बो)")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# 5. चैट संवाद व उत्तर कार्ड
+# चैट संवाद व उत्तर कार्ड
 st.markdown('<div id="chatAnswerContainer">', unsafe_allow_html=True)
 for msg in st.session_state.messages[-2:]:
     if msg["role"] == "user":
@@ -284,19 +298,17 @@ for msg in st.session_state.messages[-2:]:
         """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 6. सुपर-फ़ास्ट AI इंजन
-def ask_gemini(prompt, img):
+# AI इंजन (Gemini 3.6 Flash)
+def ask_gemini(prompt):
     if not client:
         return "त्रुटि: GEMINI_API_KEY नहीं मिली।"
     
-    models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash']
-    contents_payload = [prompt, Image.open(img)] if img else prompt
-    
+    models_to_try = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-2.0-flash']
     for m in models_to_try:
         try:
             res = client.models.generate_content(
                 model=m,
-                contents=contents_payload,
+                contents=prompt,
                 config=types.GenerateContentConfig(system_instruction=PERSONA)
             )
             if res and res.text:
@@ -323,21 +335,17 @@ def speak(text):
     </script>
     """, height=0)
 
-# 7. चैट इनपुट
+# चैट इनपुट
 user_query = st.chat_input("यहाँ लिखें या ऊपर mike बटन दबाकर बोलें...")
 
-if user_query or (active_image and st.button("🔍 इस फ़ोटो का विश्लेषण करें")):
-    q = user_query if user_query else "कृपया इस तस्वीर का विश्लेषण करें।"
-    st.session_state.messages.append({"role": "user", "content": q})
-    
-    # नंबर 4: सर्चिंग स्टेटस सीधे ऊपर दिखेगा
+if user_query:
+    st.session_state.messages.append({"role": "user", "content": user_query})
     thinking_box.markdown('<div class="thinking-badge">✨ खुशी सोच रही है... उत्तर आ रहा है ⚡</div>', unsafe_allow_html=True)
     
-    ans = ask_gemini(q, active_image)
+    ans = ask_gemini(user_query)
     st.session_state.messages.append({"role": "assistant", "content": ans})
     save_mem()
     
     thinking_box.empty()
     speak(ans)
     st.rerun()
-    
