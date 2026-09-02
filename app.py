@@ -26,7 +26,7 @@ def get_khushi_b64():
 
 khushi_b64 = get_khushi_b64()
 
-# 3. Gemini 3.6 API Client
+# 3. Gemini 3.6 Client
 raw_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
@@ -34,7 +34,7 @@ client = genai.Client(api_key=API_KEY) if API_KEY else None
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
 PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान और सच्ची AI दोस्त। समय (IST): {ist_now}। शेयर बाजार, कोडिंग, विज्ञान और सामान्य प्रश्नों के सरल, संक्षिप्त व स्पष्ट हिंदी में उत्तर दो।"
 
-# सेशन व मेमोरी
+# सेशन स्टेट
 if "messages" not in st.session_state:
     if os.path.exists("khushi_memory.json"):
         try:
@@ -49,37 +49,33 @@ def save_mem():
             json.dump(st.session_state.messages, f, ensure_ascii=False)
     except Exception: pass
 
-if "show_camera" not in st.session_state:
-    st.session_state.show_camera = False
-
-# 4. मुख्य डिस्प्ले: बायाँ 52% पोर्ट्रेट + दायाँ स्विचेस + ज़ूम मोड
+# 4. मुख्य डिस्प्ले: नॉर्मल पोर्ट्रेट + स्क्वायर ज़ूम + ऑल-ओवर वॉयस/पूस
 st.components.v1.html(f"""
 <div id="masterBoard" style="width:100%; box-sizing:border-box; background:#0a0c16; padding:8px; border-radius:14px; border:1px solid #1e2640; position:relative; overflow:hidden;">
     
-    <!-- मुख्य लेआउट ग्रिड: बायाँ आयताकार फ्रेम + दायाँ स्विचेस -->
+    <!-- सामान्य दृश्य: बायाँ पोर्ट्रेट + दायाँ स्विचेस -->
     <div id="standardGrid" style="display:flex; width:100%; gap:8px;">
         
-        <!-- बायाँ 52%: बड़ा आयताकार (Portrait) विज़ुअल + नीचे Puss और Zoom -->
+        <!-- बायाँ हिस्सा: पोर्ट्रेट विज़ुअल + Puss & Zoom नीचे -->
         <div style="width:52%; display:flex; flex-direction:column; gap:6px;">
             <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:all 0.35s ease;">
                 <img id="avatarPic" src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />
             </div>
             
-            <!-- Puss & Zoom बटन ठीक नीचे -->
             <div style="display:flex; gap:5px; width:100%;">
                 <button onclick="pussSpeech()" style="flex:1; background:#451212; color:#ff6b6b; border:1px solid #ff4b4b; padding:9px 2px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
                     🛑 Puss
                 </button>
-                <button onclick="enterZoomMode()" style="flex:1; background:#12283d; color:#38bdf8; border:1px solid #38bdf8; padding:9px 2px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+                <button onclick="enterSquareZoom()" style="flex:1; background:#12283d; color:#38bdf8; border:1px solid #38bdf8; padding:9px 2px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
                     ⛶ Zoom
                 </button>
             </div>
         </div>
 
-        <!-- दायाँ 48%: स्विचेस (कैमरा ऑन-ऑफ, माइक-स्पीकर, सेटिंग) -->
+        <!-- दायाँ हिस्सा: कैमरा ऑन-ऑफ, माइक-स्पीकर, सेटिंग -->
         <div id="switchesPanel" style="width:48%; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
             <!-- 1. कैमरा ON - OFF स्विच -->
-            <button onclick="triggerCamSwitch()" style="width:100%; background:#221b0e; color:#facc15; border:1px solid #ca8a04; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
+            <button onclick="toggleCamModal()" style="width:100%; background:#221b0e; color:#facc15; border:1px solid #ca8a04; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
                 📷 कैमरा on — off
             </button>
 
@@ -91,26 +87,33 @@ st.components.v1.html(f"""
                 <span id="micStatus" style="font-size:10px; color:#9ca3af; margin-top:4px;">माइक व स्पीकर एक्टिव</span>
             </div>
 
-            <!-- 3. सेटिंग स्विच (मेमोरी रीसेट) -->
-            <button onclick="clearHistoryDirect()" style="width:100%; background:#1c172d; color:#c084fc; border:1px solid #9333ea; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
-                ⚙️ सेटिंग (मेमोरी रीसेट)
+            <!-- 3. सेटिंग स्विच (हिडन सेटिंग्स पैनल खोलेगा) -->
+            <button onclick="toggleSettingsModal()" style="width:100%; background:#1c172d; color:#c084fc; border:1px solid #9333ea; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
+                ⚙️ सेटिंग
             </button>
         </div>
     </div>
 
-    <!-- ज़ूम स्थिति (Pure Half-Screen Cinema Mode - सारे स्विच हिडन) -->
-    <div id="zoomOverlayContainer" style="display:none; width:100%; height:50vh; position:relative; background:#000; border-radius:14px; overflow:hidden; border:2px solid #00ff80; box-shadow:0 0 25px rgba(0,255,128,0.5);">
-        <img src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />
+    <!-- ज़ूम स्थिति: संपूर्ण Square काले घेरे में आगे की ओर विज़ुअल (सारे स्विच हिडन, केवल माइक-स्पीकर व पूस) -->
+    <div id="squareZoomOverlay" style="display:none; width:100%; height:480px; position:relative; background:#000; border-radius:14px; overflow:hidden; border:2px solid #00ff80; box-shadow:0 0 30px rgba(0,255,128,0.5);">
         
-        <!-- ज़ूम आउट बटन -->
-        <button onclick="exitZoomMode()" style="position:absolute; top:12px; right:12px; z-index:100; background:#ff4b4b; color:#fff; border:none; padding:8px 16px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer;">
+        <!-- स्क्वायर काले घेरे में खुशी का चेहरा -->
+        <div style="width:100%; height:380px; display:flex; justify-content:center; align-items:center; background:#000; overflow:hidden;">
+            <img src="{khushi_b64}" style="width:380px; height:380px; object-fit:cover; object-position:center 15%; border-radius:12px; border:2px solid #222;" />
+        </div>
+        
+        <!-- ज़ूम आउट (सामान्य स्थिति में वापसी) बटन -->
+        <button onclick="exitSquareZoom()" style="position:absolute; top:12px; right:12px; z-index:100; background:#ff4b4b; color:#fff; border:none; padding:8px 16px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.7);">
             ✕ सामान्य डिस्प्ले
         </button>
 
-        <!-- ज़ूम मोड में वॉयस बटन -->
-        <div style="position:absolute; bottom:12px; left:0; width:100%; display:flex; justify-content:center; z-index:100;">
-            <button onclick="triggerMicVoice()" style="background:linear-gradient(90deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:25px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.6);">
-                🎙️ बोलिए (खुशी सुन रही है...)
+        <!-- ज़ूम में केवल 2 कंट्रोल्स: माइक-स्पीकर और पूस (Stop) -->
+        <div style="position:absolute; bottom:12px; left:0; width:100%; display:flex; justify-content:center; align-items:center; gap:12px; z-index:100; padding:0 10px; box-sizing:border-box;">
+            <button onclick="pussSpeech()" style="background:#451212; color:#ff6b6b; border:1px solid #ff4b4b; padding:12px 18px; border-radius:25px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.6);">
+                🛑 Puss (रोकें)
+            </button>
+            <button onclick="triggerMicVoice()" style="flex:1; max-width:260px; background:linear-gradient(90deg, #10b981, #059669); color:#fff; border:none; padding:12px 16px; border-radius:25px; font-weight:bold; font-size:13.5px; cursor:pointer; box-shadow:0 4px 15px rgba(0,255,128,0.3);">
+                🎙️ बोलिए (माइक व स्पीकर चालू)
             </button>
         </div>
     </div>
@@ -122,27 +125,31 @@ st.components.v1.html(f"""
 
 <script>
     const standardGrid = document.getElementById('standardGrid');
-    const zoomOverlay = document.getElementById('zoomOverlayContainer');
+    const squareOverlay = document.getElementById('squareZoomOverlay');
     const micStatus = document.getElementById('micStatus');
     const portraitFrame = document.getElementById('portraitFrame');
 
-    // Zoom Mode
-    function enterZoomMode() {{
+    // Square Zoom Mode
+    function enterSquareZoom() {{
         standardGrid.style.display = 'none';
-        zoomOverlay.style.display = 'block';
+        squareOverlay.style.display = 'block';
         
+        // नीचे चैट इनपुट, चैट आंसर और टूल्स को पूरी तरह छुपा दें
         const chatInp = window.parent.document.querySelector('div[data-testid="stChatInput"]');
         if (chatInp) chatInp.style.display = 'none';
         
         const chatCards = window.parent.document.getElementById('chatAnswerContainer');
         if (chatCards) chatCards.style.display = 'none';
 
-        const camBox = window.parent.document.getElementById('cameraBoxContainer');
+        const camBox = window.parent.document.getElementById('hiddenCameraBlock');
         if (camBox) camBox.style.display = 'none';
+
+        const setBox = window.parent.document.getElementById('hiddenSettingsBlock');
+        if (setBox) setBox.style.display = 'none';
     }}
 
-    function exitZoomMode() {{
-        zoomOverlay.style.display = 'none';
+    function exitSquareZoom() {{
+        squareOverlay.style.display = 'none';
         standardGrid.style.display = 'flex';
         
         const chatInp = window.parent.document.querySelector('div[data-testid="stChatInput"]');
@@ -159,19 +166,25 @@ st.components.v1.html(f"""
         micStatus.innerText = 'शांत';
     }}
 
-    // कैमरा स्विच
-    function triggerCamSwitch() {{
-        const btn = window.parent.document.querySelector('button[data-testid="camToggleTrigger"]');
-        if (btn) btn.click();
+    // कैमरा टॉगल (ऑन-डिमांड)
+    function toggleCamModal() {{
+        const el = window.parent.document.getElementById('hiddenCameraBlock');
+        if (el) {{
+            el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+            if (el.style.display === 'block') el.scrollIntoView({{ behavior: 'smooth' }});
+        }}
     }}
 
-    // सेटिंग (मेमोरी साफ़)
-    function clearHistoryDirect() {{
-        const btn = window.parent.document.querySelector('button[data-testid="clearMemoryTrigger"]');
-        if (btn) btn.click();
+    // सेटिंग टॉगल (ऑन-डिमांड)
+    function toggleSettingsModal() {{
+        const el = window.parent.document.getElementById('hiddenSettingsBlock');
+        if (el) {{
+            el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+            if (el.style.display === 'block') el.scrollIntoView({{ behavior: 'smooth' }});
+        }}
     }}
 
-    // माइक इंजन
+    // वॉइस रिकग्निशन
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     let rec = null;
     if (SpeechRec) {{
@@ -206,28 +219,34 @@ st.components.v1.html(f"""
 </script>
 """, height=385)
 
-# 5. अदृश्य स्विचेस (Internal Triggers - स्क्रीन पर नहीं दिखेंगे)
-st.markdown('<div style="display:none;">', unsafe_allow_html=True)
-if st.button("CamToggle", key="camToggleTrigger"):
-    st.session_state.show_camera = not st.session_state.show_camera
-    st.rerun()
-
-if st.button("ClearMemory", key="clearMemoryTrigger"):
-    st.session_state.messages = []
-    save_mem()
-    st.rerun()
+# 5. ऑन-डिमांड कैमरा ब्लॉक (शुरुआत में 100% छुपा हुआ, स्विच दबाने पर ही खुलेगा)
+active_image = None
+st.markdown('<div id="hiddenCameraBlock" style="display:none; background:#141724; padding:8px; border-radius:10px; margin:6px 0; border:1px solid #ca8a04;">', unsafe_allow_html=True)
+st.markdown("<span style='color:#facc15; font-size:12px; font-weight:bold;'>📷 कैमरा व इमेज स्कैनर (फ़ोटो लें या बंद करने के लिए स्विच दबाएँ):</span>", unsafe_allow_html=True)
+col_c1, col_c2 = st.columns(2)
+with col_c1: cam_shot = st.camera_input("कैमरा", label_visibility="collapsed")
+with col_c2: file_doc = st.file_uploader("गैलरी", type=["jpg", "png"], label_visibility="collapsed")
+active_image = cam_shot if cam_shot else file_doc
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 6. ऑन-डिमांड कैमरा (केवल और केवल 'कैमरा on — off' स्विच दबाने पर ही खुलेगा)
-active_image = None
-if st.session_state.show_camera:
-    st.markdown('<div id="cameraBoxContainer" style="background:#141724; padding:8px; border-radius:10px; margin:6px 0; border:1px solid #ca8a04;">', unsafe_allow_html=True)
-    st.markdown("<span style='color:#facc15; font-size:12px; font-weight:bold;'>📷 कैमरा सक्रिय है (फ़ोटो लें या बंद करने के लिए दोबारा स्विच दबाएँ):</span>", unsafe_allow_html=True)
-    col_c1, col_c2 = st.columns(2)
-    with col_c1: cam_shot = st.camera_input("कैमरा", label_visibility="collapsed")
-    with col_c2: file_doc = st.file_uploader("गैलरी से चुनें", type=["jpg", "png"], label_visibility="collapsed")
-    active_image = cam_shot if cam_shot else file_doc
-    st.markdown('</div>', unsafe_allow_html=True)
+# 6. हिडन सेटिंग्स ब्लॉक (शुरुआत में 100% छुपा हुआ, '⚙️ सेटिंग' स्विच दबाने पर ही खुलेगा)
+st.markdown('<div id="hiddenSettingsBlock" style="display:none; background:#181628; padding:12px; border-radius:10px; margin:6px 0; border:1px solid #9333ea;">', unsafe_allow_html=True)
+st.markdown("<b style='color:#c084fc; font-size:13px;'>⚙️ सिस्टम सेटिंग्स व टूल्स:</b>", unsafe_allow_html=True)
+st.markdown("<p style='font-size:11px; color:#a1a1aa; margin:3px 0 8px 0;'>सिस्टम कनेक्टिविटी, मॉडल स्थिति और मेमोरी प्रबंधन यहाँ से नियंत्रित करें।</p>", unsafe_allow_html=True)
+
+col_s1, col_s2 = st.columns(2)
+with col_s1:
+    if st.button("🗑️ चैट हिस्ट्री / मेमोरी साफ़ करें", use_container_width=True):
+        st.session_state.messages = []
+        save_mem()
+        st.success("मेमोरी रीसेट हो गई!")
+        st.rerun()
+with col_s2:
+    if st.button("🔄 सिस्टम रीलोड / रिफ्रेश", use_container_width=True):
+        st.rerun()
+
+st.caption("🟢 एक्टिव मॉडल: **Gemini 3.6 Flash** | रिस्पॉन्स लेटेंसी: सुपर-फ़ास्ट")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # 7. चैट संवाद व उत्तर कार्ड
 st.markdown('<div id="chatAnswerContainer">', unsafe_allow_html=True)
@@ -291,4 +310,4 @@ if user_query or (active_image and st.button("🔍 इस फ़ोटो का
         save_mem()
         speak(ans)
         st.rerun()
-            
+        
