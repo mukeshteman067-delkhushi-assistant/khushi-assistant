@@ -1,11 +1,11 @@
 import streamlit as st
-import json, os, re, base64
+import json, os, re, base64, urllib.request
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 from google import genai
 from google.genai import types
 
-# 1. पेज कॉन्फ़िगरेशन (डिज़ाइन 100% फ्रोज़न)
+# 1. पेज कॉन्फ़िगरेशन (डिज़ाइन 100% सुरक्षित)
 st.set_page_config(page_title="Khushi AI", page_icon="🌸", layout="wide")
 
 st.markdown("""
@@ -50,15 +50,40 @@ def get_khushi_assets():
     return has_vid, v_b64, img_b64
 
 has_vid, khushi_video, khushi_img = get_khushi_assets()
-active_visual = khushi_video if has_vid else khushi_img
 
-# 3. आधिकारिक Gemini 3.6 Flash Client
-raw_key = st.secrets.get("GEMINI_API_KEY", "")
-API_KEY = "".join(raw_key.split()) if raw_key else ""
-client = genai.Client(api_key=API_KEY) if API_KEY else None
+# 3. API सेटिंग्स
+GEMINI_KEY = st.secrets.get("GEMINI_API_KEY", "").strip()
+ELEVEN_KEY = st.secrets.get("ELEVENLABS_API_KEY", "").strip()
+ELEVEN_VOICE_ID = st.secrets.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM").strip() # डिफ़ॉल्ट या आपकी कस्टम वॉयस ID
+
+client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
 PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान, सजीव और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल, सजीव और सीधे हिंदी में 2-3 पंक्तियों में तुरंत उत्तर दो।"
+
+# 4. ElevenLabs ऑडियो जनरेटर (प्राकृतिक मानवीय आवाज़)
+def get_elevenlabs_audio(text):
+    if not ELEVEN_KEY:
+        return ""
+    try:
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVEN_VOICE_ID}"
+        headers = {
+            "Accept": "audio/mpeg",
+            "Content-Type": "application/json",
+            "xi-api-key": ELEVEN_KEY
+        }
+        data = json.dumps({
+            "text": text,
+            "model_id": "eleven_multilingual_v2",
+            "voice_settings": {"stability": 0.5, "similarity_boost": 0.8}
+        }).encode("utf-8")
+        
+        req = urllib.request.Request(url, data=data, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as res:
+            audio_bytes = res.read()
+            return f"data:audio/mp3;base64,{base64.b64encode(audio_bytes).decode()}"
+    except Exception:
+        return ""
 
 # मेमोरी
 if "messages" not in st.session_state:
@@ -81,30 +106,29 @@ if st.query_params.get("action") == "clear":
     st.query_params.clear()
     st.rerun()
 
-# जो उत्तर बोलना है उसे तैयार करना
-speak_text = ""
+# अंतिम उत्तर और ऑडियो
+last_audio = st.session_state.get("current_audio", "")
+last_answer = ""
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
-    speak_text = st.session_state.messages[-1]["content"]
-clean_speak = re.sub(r'[*#~`_+=|\\<>]', ' ', speak_text).replace('"', ' ').replace("'", " ").strip()
+    last_answer = st.session_state.messages[-1]["content"]
+clean_speak = re.sub(r'[*#~`_+=|\\<>]', ' ', last_answer).replace('"', ' ').replace("'", " ").strip()
 
-# 4. फ्रोज़न लेआउट + एडवांस्ड लिप-सिंक व ऑडियो इंजन
+# 5. मुख्य फ्रोज़न डिस्प्ले + Web Audio API रियल लिप-सिंक इंजन
 st.components.v1.html(f"""
 <div id="masterBoard" style="width:100%; box-sizing:border-box; background:#0a0c16; padding:8px; border-radius:14px; border:1px solid #1e2640; position:relative; overflow:hidden;">
     
     <div id="standardGrid" style="display:flex; width:100%; gap:8px;">
         
-        <!-- बायाँ 52%: विज़ुअल + हाव-भाव + Puss & Zoom नीचे -->
+        <!-- बायाँ 52%: विज़ुअल + वोकल लिप-सिंक -->
         <div style="width:52%; display:flex; flex-direction:column; gap:6px;">
-            <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:transform 0.4s ease, border-color 0.3s ease;">
+            <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:transform 0.15s ease, border-color 0.2s ease;">
+                {'<video id="khushiMediaNormal" src="' + khushi_video + '" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>' if has_vid else '<img id="khushiMediaNormal" src="' + khushi_img + '" style="width:100%; height:100%; object-fit:cover; object-position:center 12%;" />'}
                 
-                <!-- यदि MP4 है तो वीडियो अन्यथा स्मार्ट फोटो -->
-                {'<video id="khushiMediaNormal" src="' + khushi_video + '" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>' if has_vid else '<img id="khushiMediaNormal" src="' + khushi_img + '" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />'}
-                
-                <!-- लिप्सिंग व वॉइस वेव इंडिकेटर -->
+                <!-- वोकल ऑडियो वेव इंडिकेटर -->
                 <div id="voiceWave" style="position:absolute; bottom:6px; left:50%; transform:translateX(-50%); display:none; gap:3px; align-items:flex-end; height:18px;">
-                    <div style="width:3px; height:8px; background:#00ff80; border-radius:2px; animation:waveBounce 0.5s infinite alternate;"></div>
-                    <div style="width:3px; height:16px; background:#00ff80; border-radius:2px; animation:waveBounce 0.3s infinite alternate;"></div>
-                    <div style="width:3px; height:10px; background:#00ff80; border-radius:2px; animation:waveBounce 0.4s infinite alternate;"></div>
+                    <div class="bar" style="width:3px; height:8px; background:#00ff80; border-radius:2px;"></div>
+                    <div class="bar" style="width:3px; height:16px; background:#00ff80; border-radius:2px;"></div>
+                    <div class="bar" style="width:3px; height:10px; background:#00ff80; border-radius:2px;"></div>
                 </div>
             </div>
             
@@ -169,10 +193,7 @@ st.components.v1.html(f"""
     </div>
 </div>
 
-<style>
-    @keyframes breathe {{ 0%{{transform:scale(1);}} 50%{{transform:scale(1.02) translateY(-1px);}} 100%{{transform:scale(1);}} }}
-    @keyframes waveBounce {{ 0%{{height:4px;}} 100%{{height:18px;}} }}
-</style>
+<audio id="elevenAudioPlayer" src="{last_audio}" preload="auto"></audio>
 
 <script>
     const standardGrid = document.getElementById('standardGrid');
@@ -185,63 +206,106 @@ st.components.v1.html(f"""
     const camBtn = document.getElementById('camToggleBtn');
     const portraitFrame = document.getElementById('portraitFrame');
     const voiceWave = document.getElementById('voiceWave');
+    const audioPlayer = document.getElementById('elevenAudioPlayer');
     
     const mNorm = document.getElementById('khushiMediaNormal');
     const mZoom = document.getElementById('khushiMediaZoom');
 
     let camStream = null;
+    let audioCtx = null;
+    let analyser = null;
+    let animFrame = null;
 
-    // लिप-सिंक, बॉडी मोशन व हाव-भाव सिंक
-    function activateSpeakingState() {{
-        if (mNorm && mNorm.tagName === 'VIDEO') {{ mNorm.playbackRate = 1.0; mNorm.play().catch(e=>{{}}); }}
-        if (mZoom && mZoom.tagName === 'VIDEO') {{ mZoom.playbackRate = 1.0; mZoom.play().catch(e=>{{}}); }}
-        
-        // प्राकृतिक हेड टिल्ट व ग्लोइंग फ्रेम
-        portraitFrame.style.transform = 'scale(1.03) rotate(0.8deg)';
-        portraitFrame.style.borderColor = '#00ff80';
-        portraitFrame.style.boxShadow = '0 0 25px rgba(0,255,128,0.6)';
-        if (voiceWave) voiceWave.style.display = 'flex';
+    // Web Audio API द्वारा वास्तविक लिप-सिंक (वॉल्यूम व पिच के अनुसार चेहरे का हिलना)
+    function setupAudioVisualSync(sourceNode) {{
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        sourceNode.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        function updateLipMotion() {{
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+            let avg = sum / dataArray.length;
+
+            if (avg > 15) {{
+                // आवाज़ के वॉल्यूम के अनुसार लाइव स्केल और टिल्ट (सच्चा लिप-मोशन)
+                let scaleVal = 1 + (avg / 700);
+                let rotateVal = (avg % 3 === 0) ? 0.7 : -0.7;
+                portraitFrame.style.transform = `scale(${{scaleVal}}) rotate(${{rotateVal}}deg)`;
+                portraitFrame.style.borderColor = '#00ff80';
+                if (voiceWave) voiceWave.style.display = 'flex';
+                if (mNorm && mNorm.tagName === 'VIDEO' && mNorm.paused) mNorm.play().catch(e=>{{}});
+                if (mZoom && mZoom.tagName === 'VIDEO' && mZoom.paused) mZoom.play().catch(e=>{{}});
+            }} else {{
+                portraitFrame.style.transform = 'scale(1) rotate(0deg)';
+                portraitFrame.style.borderColor = '#ff4b4b';
+                if (voiceWave) voiceWave.style.display = 'none';
+            }}
+
+            animFrame = requestAnimationFrame(updateLipMotion);
+        }}
+        updateLipMotion();
     }}
 
-    function deactivateSpeakingState() {{
-        if (mNorm && mNorm.tagName === 'VIDEO') {{ mNorm.pause(); }}
-        if (mZoom && mZoom.tagName === 'VIDEO') {{ mZoom.pause(); }}
-        
+    function stopLipMotion() {{
+        if (animFrame) cancelAnimationFrame(animFrame);
         portraitFrame.style.transform = 'scale(1) rotate(0deg)';
         portraitFrame.style.borderColor = '#ff4b4b';
-        portraitFrame.style.boxShadow = '0 0 18px rgba(255,75,75,0.35)';
         if (voiceWave) voiceWave.style.display = 'none';
+        if (mNorm && mNorm.tagName === 'VIDEO') mNorm.pause();
+        if (mZoom && mZoom.tagName === 'VIDEO') mZoom.pause();
     }}
 
-    // रीयल-टाइम जीरो-लैग ऑटो-स्पीक इंजन
-    const textToSpeak = "{clean_speak}";
-    if (textToSpeak && textToSpeak.length > 0) {{
+    // ऑटो-प्ले: या तो ElevenLabs AI आवाज़ या फिर फ़ॉलबैक न्यूरल आवाज़
+    const elevenAudio = "{last_audio}";
+    const fallbackText = "{clean_speak}";
+
+    window.addEventListener('load', () => {{
+        if (elevenAudio && elevenAudio.length > 50) {{
+            // ElevenLabs AI Audio Play
+            micStatus.innerText = "खुशी बोल रही है... (AI Voice) 🔊";
+            audioPlayer.play().then(() => {{
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaElementSource(audioPlayer);
+                setupAudioVisualSync(source);
+            }}).catch(e => {{ playWebSpeechFallback(); }});
+
+            audioPlayer.onended = () => {{
+                stopLipMotion();
+                micStatus.innerText = "माइक व स्पीकर एक्टिव";
+            }};
+        }} else if (fallbackText && fallbackText.length > 0) {{
+            playWebSpeechFallback();
+        }}
+    }});
+
+    function playWebSpeechFallback() {{
         const win = window.parent || window;
         if ('speechSynthesis' in win) {{
             win.speechSynthesis.cancel();
-            const utter = new win.SpeechSynthesisUtterance(textToSpeak);
-            utter.lang = 'hi-IN';
-            utter.rate = 1.0;
-            utter.pitch = 1.05;
-
-            utter.onstart = () => {{
-                activateSpeakingState();
+            const u = new win.SpeechSynthesisUtterance(fallbackText);
+            u.lang = 'hi-IN';
+            u.rate = 1.0;
+            u.onstart = () => {{
                 micStatus.innerText = "खुशी बोल रही है... 🔊";
+                if (mNorm && mNorm.tagName === 'VIDEO') mNorm.play().catch(e=>{{}});
+                if (mZoom && mZoom.tagName === 'VIDEO') mZoom.play().catch(e=>{{}});
+                portraitFrame.style.borderColor = '#00ff80';
             }};
-            utter.onend = () => {{
-                deactivateSpeakingState();
+            u.onend = () => {{
+                stopLipMotion();
                 micStatus.innerText = "माइक व स्पीकर एक्टिव";
             }};
-            utter.onerror = () => {{
-                deactivateSpeakingState();
-                micStatus.innerText = "माइक व स्पीकर एक्टिव";
-            }};
-
-            setTimeout(() => {{ win.speechSynthesis.speak(utter); }}, 100);
+            win.speechSynthesis.speak(u);
         }}
     }}
 
-    // 1. लाइव कैमरा टॉगल
+    // 1. लाइव कैमरा
     async function toggleInternalCam() {{
         if (camStream) {{
             camStream.getTracks().forEach(track => track.stop());
@@ -279,7 +343,7 @@ st.components.v1.html(f"""
         window.parent.location.href = url.toString();
     }}
 
-    // 3. Zoom Toggle
+    // 3. Zoom
     function enterSquareZoom() {{
         squareOverlay.style.display = 'flex';
         const pDoc = window.parent.document;
@@ -302,23 +366,21 @@ st.components.v1.html(f"""
     // 4. Puss (तुरंत म्यूट)
     function pussSpeech() {{
         try {{
+            if (audioPlayer) {{ audioPlayer.pause(); audioPlayer.currentTime = 0; }}
             const win = window.parent || window;
             if (win.speechSynthesis) win.speechSynthesis.cancel();
         }} catch(e) {{}}
-        deactivateSpeakingState();
+        stopLipMotion();
         micStatus.innerText = 'शांत';
     }}
 
-    // 5. वॉयस इंजन (Keep-Alive के साथ)
+    // 5. वॉयस इंजन
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || (window.parent && (window.parent.SpeechRecognition || window.parent.webkitSpeechRecognition));
     let rec = null;
 
     if (SpeechRec) {{
         rec = new SpeechRec();
         rec.lang = 'hi-IN';
-        rec.continuous = false;
-        rec.interimResults = false;
-
         rec.onstart = () => {{
             micStatus.innerText = "सुन रही हूँ... बोलिए 🎙️";
             micBtn.style.background = "#10b981";
@@ -344,12 +406,10 @@ st.components.v1.html(f"""
     }}
 
     function triggerMicVoice() {{
-        // ब्राउज़र ऑडियो को जगाए रखें (Never Sleeps)
+        // ऑडियो कॉन्टेक्स्ट को एक्टिव रखें (ब्राउज़र स्लीप न हो)
         try {{
-            const win = window.parent || window;
-            const keepAlive = new win.SpeechSynthesisUtterance(" ");
-            keepAlive.volume = 0.01;
-            win.speechSynthesis.speak(keepAlive);
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
         }} catch(e) {{}}
 
         if (rec) {{
@@ -363,7 +423,7 @@ st.components.v1.html(f"""
 
 thinking_box = st.empty()
 
-# 5. चैट संवाद व उत्तर कार्ड
+# 6. चैट संवाद व उत्तर कार्ड
 st.markdown('<div id="chatAnswerContainer">', unsafe_allow_html=True)
 for msg in st.session_state.messages[-2:]:
     if msg["role"] == "user":
@@ -377,12 +437,11 @@ for msg in st.session_state.messages[-2:]:
         """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 6. आधिकारिक Gemini 3.6 Flash इंजन
+# 7. सुपर-फास्ट Gemini 3.6 Flash इंजन
 def ask_gemini(prompt):
     if not client:
-        return "त्रुटि: GEMINI_API_KEY नहीं मिली। कृपया Secrets जाँचें।"
+        return "त्रुटि: GEMINI_API_KEY नहीं मिली।"
     
-    # 3.6 Flash सक्रिय और प्राथमिक है
     models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash-lite']
     for m in models_to_try:
         try:
@@ -398,7 +457,7 @@ def ask_gemini(prompt):
             
     return "माफ़ कीजिए, सर्वर व्यस्त है। कृपया पुनः पूछें।"
 
-# 7. चैट इनपुट
+# 8. चैट इनपुट
 user_query = st.chat_input("यहाँ लिखें या ऊपर mike बटन दबाकर बोलें...")
 
 if user_query:
@@ -408,6 +467,9 @@ if user_query:
     ans = ask_gemini(user_query)
     st.session_state.messages.append({"role": "assistant", "content": ans})
     save_mem()
+    
+    # ElevenLabs ऑडियो फेच (यदि उपलब्ध हो)
+    st.session_state.current_audio = get_elevenlabs_audio(ans)
     
     thinking_box.empty()
     st.rerun()
