@@ -500,7 +500,7 @@ pro_header_html = f"""
                     if (sendBtn) {{
                         sendBtn.click();
                     }} else {{
-                        input.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+                        input.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }}));
                     }}
                 }}, 300);
             }}
