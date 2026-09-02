@@ -126,13 +126,14 @@ else:
     master_col_left, master_col_right = st.columns([52, 48])
     
     with master_col_left:
-        # बायाँ 52% फ्रेम
+        # बायाँ 52% फ्रेम (खुशी की इमेज/वीडियो)
         st.markdown(f"""
         <div style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35);">
             {'<video src="' + media_src + '" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />'}
         </div>
         """, unsafe_allow_html=True)
         
+        # संशोधन 1: Puss और Zoom दोनों इमेज के ठीक नीचे एक साथ पास-पास
         col_bl, col_br = st.columns(2)
         with col_bl:
             if st.button("🛑 Puss", key="btn_puss"):
@@ -144,23 +145,7 @@ else:
                 st.rerun()
 
     with master_col_right:
-        # 1. कैमरा ऑन-ऑफ बटन
-        cam_text = "📷 कैमरा on — off" if not st.session_state.cam_on else "📷 कैमरा (LIVE ON)"
-        if st.button(cam_text, key="btn_cam_toggle"):
-            st.session_state.cam_on = not st.session_state.cam_on
-            st.rerun()
-            
-        # 2. बीच का बॉक्स: इन-प्लेस कैमरा
-        if st.session_state.cam_on:
-            st.camera_input("लाइव कैमरा", label_visibility="collapsed", key="in_cam")
-        else:
-            st.markdown("""
-            <div style="width:100%; height:88px; background:#07080f; border-radius:10px; border:1px dashed #2e3856; display:flex; align-items:center; justify-content:center;">
-                <span style="color:#555f7d; font-size:11px;">कैमरा स्टैंडबाय (OFF)</span>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        # 3. mike - spiker (बोलें)
+        # संशोधन 2: माइक-स्पीकर वाली red बटन को कैमरा के ऊपर (शीर्ष पर, Zoom और Puss के पास) ले आया गया
         st.components.v1.html("""
         <div style="text-align:center;">
             <button id="nativeMic" style="width:100%; background:#ff4b4b; color:white; border:none; padding:12px 2px; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(255,75,75,0.45);">
@@ -202,6 +187,22 @@ else:
             }
         </script>
         """, height=65)
+
+        # 2. कैमरा ऑन-ऑफ बटन (माइक के नीचे)
+        cam_text = "📷 कैमरा on — off" if not st.session_state.cam_on else "📷 कैमरा (LIVE ON)"
+        if st.button(cam_text, key="btn_cam_toggle"):
+            st.session_state.cam_on = not st.session_state.cam_on
+            st.rerun()
+            
+        # 3. बीच का बॉक्स: इन-प्लेस कैमरा
+        if st.session_state.cam_on:
+            st.camera_input("लाइव कैमरा", label_visibility="collapsed", key="in_cam")
+        else:
+            st.markdown("""
+            <div style="width:100%; height:88px; background:#07080f; border-radius:10px; border:1px dashed #2e3856; display:flex; align-items:center; justify-content:center;">
+                <span style="color:#555f7d; font-size:11px;">कैमरा स्टैंडबाय (OFF)</span>
+            </div>
+            """, unsafe_allow_html=True)
         
         # 4. इनलाइन कॉम्पैक्ट सेटिंग्स
         st.markdown("""
