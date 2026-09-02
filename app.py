@@ -105,7 +105,7 @@ if st.session_state.is_zoom:
     # 1:1 स्क्वायर ज़ूम सिनेमाई डिस्प्ले
     st.markdown(f"""
     <div style="width:100%; min-height:62vh; max-height:480px; background:#070913; border-radius:12px; border:2px solid #00ff80; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:5px; box-sizing:border-box;">
-        <div style="width:100%; height:100%; border-radius:10px; overflow:hidden; border:18px solid #00ff80; box-shadow:0 0 15px rgba(0,255,128,0.4); margin-bottom:10px;">
+        <div style="width:100%; height:100%; border-radius:10px; overflow:hidden; border:10px solid #00ff80; box-shadow:0 0 10px rgba(0,255,128,0.4); margin-bottom:10px;">
             {'<video src="' + media_src + '" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover;" />'}
         </div>
     </div>
