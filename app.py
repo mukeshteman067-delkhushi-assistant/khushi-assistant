@@ -14,7 +14,6 @@ st.markdown("""
     .block-container { padding: 0.2rem 0.4rem 4rem 0.4rem !important; max-width: 100% !important; }
     header, footer, #MainMenu { visibility: hidden !important; }
     
-    /* ऊपर चमकने वाला थिंकिंग स्टेटस */
     .thinking-badge {
         background: linear-gradient(90deg, rgba(0,255,128,0.2), rgba(56,189,248,0.2));
         border: 1px solid #00ff80;
@@ -34,18 +33,23 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. खुशी ओरिजिनल इमेज (Base64)
-def get_khushi_b64():
+# 2. खुशी ओरिजिनल इमेज / MP4 वीडियो हैंडलर
+def get_khushi_media():
+    if os.path.exists("khushi.mp4"):
+        try:
+            with open("khushi.mp4", "rb") as f:
+                return "video", f"data:video/mp4;base64,{base64.b64encode(f.read()).decode()}"
+        except Exception: pass
     if os.path.exists("khushi.jpg"):
         try:
             with open("khushi.jpg", "rb") as f:
-                return f"data:image/jpeg;base64,{base64.b64encode(f.read()).decode()}"
+                return "image", f"data:image/jpeg;base64,{base64.b64encode(f.read()).decode()}"
         except Exception: pass
-    return ""
+    return "image", ""
 
-khushi_b64 = get_khushi_b64()
+media_type, khushi_media = get_khushi_media()
 
-# 3. Gemini 3.6 Flash Client Setup
+# 3. Gemini 3.6 Flash Client
 raw_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
@@ -53,7 +57,7 @@ client = genai.Client(api_key=API_KEY) if API_KEY else None
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
 PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल, सटीक और स्पष्ट हिंदी में उत्तर दो।"
 
-# मेमोरी प्रबंधन
+# मेमोरी
 if "messages" not in st.session_state:
     if os.path.exists("khushi_memory.json"):
         try:
@@ -68,24 +72,30 @@ def save_mem():
             json.dump(st.session_state.messages, f, ensure_ascii=False)
     except Exception: pass
 
-# URL Action Receiver (इनलाइन सेटिंग के 1-क्लिक ट्रिगर के लिए)
 if st.query_params.get("action") == "clear":
     st.session_state.messages = []
     save_mem()
     st.query_params.clear()
     st.rerun()
 
-# 4. फ्रोज़न लेआउट + इन-प्लेस लाइव कैमरा + इनलाइन कॉम्पैक्ट सेटिंग्स
+# मीडिया टैग (MP4 या इमेज)
+if media_type == "video":
+    media_tag_normal = f'<video id="avatarPic" src="{khushi_media}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>'
+    media_tag_zoom = f'<video src="{khushi_media}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 15%;"></video>'
+else:
+    media_tag_normal = f'<img id="avatarPic" src="{khushi_media}" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />'
+    media_tag_zoom = f'<img src="{khushi_media}" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />'
+
+# 4. फ्रोज़न लेआउट + ऑडियो अनलॉकर
 st.components.v1.html(f"""
 <div id="masterBoard" style="width:100%; box-sizing:border-box; background:#0a0c16; padding:8px; border-radius:14px; border:1px solid #1e2640; position:relative; overflow:hidden;">
     
-    <!-- मुख्य सामान्य ग्रिड: बायाँ पोर्ट्रेट + दायाँ स्विचेस -->
     <div id="standardGrid" style="display:flex; width:100%; gap:8px;">
         
-        <!-- बायाँ 52%: पोर्ट्रेट विज़ुअल + Puss & Zoom ठीक नीचे -->
+        <!-- बायाँ 52%: पोर्ट्रेट / MP4 विज़ुअल + Puss & Zoom नीचे -->
         <div style="width:52%; display:flex; flex-direction:column; gap:6px;">
-            <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35);">
-                <img id="avatarPic" src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />
+            <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:all 0.35s ease;">
+                {media_tag_normal}
             </div>
             
             <div style="display:flex; gap:5px; width:100%;">
@@ -98,20 +108,17 @@ st.components.v1.html(f"""
             </div>
         </div>
 
-        <!-- दायाँ 48%: स्विचेस + बीच की खाली जगह में इन-प्लेस लाइव कैमरा + इनलाइन सेटिंग्स -->
+        <!-- दायाँ 48%: स्विचेस + लाइव कैमरा + इनलाइन सेटिंग्स -->
         <div id="switchesPanel" style="width:48%; display:flex; flex-direction:column; justify-content:space-between; gap:6px;">
-            <!-- 1. कैमरा ON - OFF स्विच -->
             <button id="camToggleBtn" onclick="toggleInternalCam()" style="width:100%; background:#221b0e; color:#facc15; border:1px solid #ca8a04; padding:9px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                 📷 कैमरा on — off
             </button>
 
-            <!-- बीच का रिक्त हिस्सा: इन-प्लेस लाइव कैमरा विंडो -->
             <div id="inlineCamBox" style="width:100%; height:88px; background:#07080f; border-radius:10px; border:1px dashed #2e3856; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center;">
                 <video id="liveVideoFeed" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; display:none;"></video>
                 <span id="camPlaceholderText" style="color:#555f7d; font-size:10px; text-align:center; padding:4px;">कैमरा स्टैंडबाय (OFF)</span>
             </div>
 
-            <!-- 2. mike - spiker (बोलने के लिए) -->
             <div style="display:flex; flex-direction:column; align-items:center;">
                 <button id="micBtn" style="width:100%; background:#ff4b4b; color:white; border:none; padding:12px 2px; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(255,75,75,0.45);">
                     🎙️ mike - spiker (बोलें)
@@ -119,7 +126,6 @@ st.components.v1.html(f"""
                 <span id="micStatus" style="font-size:10px; color:#9ca3af; margin-top:2px;">माइक व स्पीकर एक्टिव</span>
             </div>
 
-            <!-- 3. इनलाइन कॉम्पैक्ट सेटिंग्स विकल्प (बिना किसी फैलाव के) -->
             <div style="width:100%; background:#131526; border:1px solid #7c3aed; border-radius:10px; padding:5px 4px; box-sizing:border-box;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:0 2px;">
                     <span style="color:#c084fc; font-size:10.5px; font-weight:bold;">⚙️ सेटिंग</span>
@@ -132,7 +138,7 @@ st.components.v1.html(f"""
         </div>
     </div>
 
-    <!-- ज़ूम स्थिति: 100vh Cinema Mode (सारे स्विच व खाली जगह गायब) -->
+    <!-- ज़ूम स्थिति: 100vh Cinema Mode -->
     <div id="squareZoomOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#070913; z-index:999999; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; padding:15px;">
         
         <button onclick="exitSquareZoom()" style="position:absolute; top:15px; right:15px; background:#ff4b4b; color:#fff; border:none; padding:9px 18px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.8);">
@@ -140,7 +146,7 @@ st.components.v1.html(f"""
         </button>
 
         <div style="width:85vw; max-width:380px; height:85vw; max-height:380px; background:#000; border:2px solid #00ff80; border-radius:14px; overflow:hidden; box-shadow:0 0 35px rgba(0,255,128,0.5); display:flex; align-items:center; justify-content:center;">
-            <img src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />
+            {media_tag_zoom}
         </div>
 
         <div style="display:flex; gap:12px; width:85vw; max-width:380px; margin-top:20px; align-items:center; justify-content:center;">
@@ -167,10 +173,11 @@ st.components.v1.html(f"""
     const camBox = document.getElementById('inlineCamBox');
     const camPlaceholder = document.getElementById('camPlaceholderText');
     const camBtn = document.getElementById('camToggleBtn');
+    const portraitFrame = document.getElementById('portraitFrame');
 
     let camStream = null;
 
-    // 1. इन-प्लेस लाइव कैमरा टॉगल (उसी निर्धारित काले हिस्से में)
+    // 1. लाइव कैमरा
     async function toggleInternalCam() {{
         if (camStream) {{
             camStream.getTracks().forEach(track => track.stop());
@@ -201,14 +208,14 @@ st.components.v1.html(f"""
         }}
     }}
 
-    // 2. इनलाइन 1-क्लिक मेमोरी साफ़
+    // 2. मेमोरी साफ़
     function clearMemoryDirect() {{
         const url = new URL(window.parent.location.href);
         url.searchParams.set('action', 'clear');
         window.parent.location.href = url.toString();
     }}
 
-    // 3. Zoom Toggle
+    // 3. Zoom
     function enterSquareZoom() {{
         squareOverlay.style.display = 'flex';
         const pDoc = window.parent.document;
@@ -233,12 +240,23 @@ st.components.v1.html(f"""
             window.speechSynthesis.cancel();
             if (window.parent && window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
         }} catch(e) {{}}
+        portraitFrame.style.borderColor = '#ff4b4b';
         micStatus.innerText = 'शांत';
     }}
 
-    // 5. वॉयस इंजन
+    // 5. वॉयस इंजन (100% अनलॉक ऑडियो)
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || (window.parent && (window.parent.SpeechRecognition || window.parent.webkitSpeechRecognition));
     let rec = null;
+
+    function unlockAudioEngine() {{
+        try {{
+            const win = window.parent || window;
+            const dummy = new win.SpeechSynthesisUtterance(" ");
+            dummy.volume = 0.01;
+            win.speechSynthesis.speak(dummy);
+        }} catch(e) {{}}
+    }}
+
     if (SpeechRec) {{
         rec = new SpeechRec();
         rec.lang = 'hi-IN';
@@ -267,11 +285,7 @@ st.components.v1.html(f"""
     }}
 
     function triggerMicVoice() {{
-        try {{
-            const u = new SpeechSynthesisUtterance("");
-            window.speechSynthesis.speak(u);
-            if (window.parent && window.parent.speechSynthesis) window.parent.speechSynthesis.speak(u);
-        }} catch(e) {{}}
+        unlockAudioEngine();
         if (rec) {{
             try {{ rec.start(); }} catch(e) {{ rec.stop(); setTimeout(() => rec.start(), 200); }}
         }}
@@ -281,7 +295,6 @@ st.components.v1.html(f"""
 </script>
 """, height=385)
 
-# शीर्ष थिंकिंग प्लेसहोल्डर
 thinking_box = st.empty()
 
 # चैट संवाद व उत्तर कार्ड
@@ -302,7 +315,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 def ask_gemini(prompt):
     if not client:
         return "त्रुटि: GEMINI_API_KEY नहीं मिली।"
-    
     models_to_try = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-2.0-flash']
     for m in models_to_try:
         try:
@@ -315,23 +327,36 @@ def ask_gemini(prompt):
                 return res.text
         except Exception:
             continue
-            
     return "माफ़ कीजिए, सर्वर व्यस्त है। कृपया पुनः पूछें।"
 
+# वॉयस सिंथेसाइज़र (हर हाल में आवाज़ सुनाने वाला इंजन)
 def speak(text):
     clean = re.sub(r'[*#~`_+=|\\<>]', ' ', text).replace('"', '').replace("'", "")
     st.components.v1.html(f"""
     <script>
-        try {{
+        function playAudio() {{
             const win = window.parent || window;
             if ('speechSynthesis' in win) {{
                 win.speechSynthesis.cancel();
                 const u = new win.SpeechSynthesisUtterance("{clean}");
                 u.lang = 'hi-IN';
-                u.rate = 0.95;
+                u.rate = 1.0;
+                u.pitch = 1.05;
+                
+                // हिंदी वॉयस प्राथमिकता
+                const voices = win.speechSynthesis.getVoices();
+                for (let v of voices) {{
+                    if (v.lang.includes('hi') || v.lang.includes('IN')) {{
+                        u.voice = v;
+                        break;
+                    }}
+                }}
+                
                 win.speechSynthesis.speak(u);
             }}
-        }} catch(e) {{}}
+        }}
+        playAudio();
+        setTimeout(playAudio, 250);
     </script>
     """, height=0)
 
