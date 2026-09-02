@@ -2,7 +2,6 @@ import streamlit as st
 import json, os, re, base64
 from datetime import datetime, timezone, timedelta
 from PIL import Image
-import io
 from google import genai
 from google.genai import types
 
@@ -33,31 +32,35 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. खुशी ओरिजिनल इमेज / MP4 वीडियो हैंडलर
-def get_khushi_media():
-    if os.path.exists("khushi.mp4"):
+# 2. खुशी मीडिया (MP4 या फ़ोटो)
+def get_khushi_assets():
+    has_vid = os.path.exists("khushi.mp4")
+    v_b64 = ""
+    img_b64 = ""
+    if has_vid:
         try:
             with open("khushi.mp4", "rb") as f:
-                return "video", f"data:video/mp4;base64,{base64.b64encode(f.read()).decode()}"
+                v_b64 = f"data:video/mp4;base64,{base64.b64encode(f.read()).decode()}"
         except Exception: pass
     if os.path.exists("khushi.jpg"):
         try:
             with open("khushi.jpg", "rb") as f:
-                return "image", f"data:image/jpeg;base64,{base64.b64encode(f.read()).decode()}"
+                img_b64 = f"data:image/jpeg;base64,{base64.b64encode(f.read()).decode()}"
         except Exception: pass
-    return "image", ""
+    return has_vid, v_b64, img_b64
 
-media_type, khushi_media = get_khushi_media()
+has_vid, khushi_video, khushi_img = get_khushi_assets()
+active_visual = khushi_video if has_vid else khushi_img
 
-# 3. Gemini 3.6 Flash Client
+# 3. आधिकारिक Gemini 3.6 Flash Client
 raw_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
-PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल, सजीव और स्पष्ट हिंदी में उत्तर दो।"
+PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान, सजीव और सच्ची, मुकेश की AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल, सजीव और सीधे हिंदी में 2-3 पंक्तियों में तुरंत उत्तर दो।"
 
-# मेमोरी प्रबंधन
+# मेमोरी
 if "messages" not in st.session_state:
     if os.path.exists("khushi_memory.json"):
         try:
@@ -78,24 +81,31 @@ if st.query_params.get("action") == "clear":
     st.query_params.clear()
     st.rerun()
 
-# मीडिया टैग (MP4 आधारित डायनामिक लिप-सिंक प्लेयर)
-if media_type == "video":
-    media_tag_normal = f'<video id="avatarVideoNormal" src="{khushi_media}" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>'
-    media_tag_zoom = f'<video id="avatarVideoZoom" src="{khushi_media}" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 15%;"></video>'
-else:
-    media_tag_normal = f'<img id="avatarPic" src="{khushi_media}" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />'
-    media_tag_zoom = f'<img src="{khushi_media}" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />'
+# जो उत्तर बोलना है उसे तैयार करना
+speak_text = ""
+if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
+    speak_text = st.session_state.messages[-1]["content"]
+clean_speak = re.sub(r'[*#~`_+=|\\<>]', ' ', speak_text).replace('"', ' ').replace("'", " ").strip()
 
-# 4. फ्रोज़न लेआउट + रीयल-टाइम लिप-सिंक & जीरो-लैग ऑडियो इंजन
+# 4. फ्रोज़न लेआउट + एडवांस्ड लिप-सिंक व ऑडियो इंजन
 st.components.v1.html(f"""
 <div id="masterBoard" style="width:100%; box-sizing:border-box; background:#0a0c16; padding:8px; border-radius:14px; border:1px solid #1e2640; position:relative; overflow:hidden;">
     
     <div id="standardGrid" style="display:flex; width:100%; gap:8px;">
         
-        <!-- बायाँ 52%: पोर्ट्रेट / MP4 विज़ुअल + Puss & Zoom नीचे -->
+        <!-- बायाँ 52%: विज़ुअल + हाव-भाव + Puss & Zoom नीचे -->
         <div style="width:52%; display:flex; flex-direction:column; gap:6px;">
-            <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:all 0.35s ease;">
-                {media_tag_normal}
+            <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:transform 0.4s ease, border-color 0.3s ease;">
+                
+                <!-- यदि MP4 है तो वीडियो अन्यथा स्मार्ट फोटो -->
+                {'<video id="khushiMediaNormal" src="' + khushi_video + '" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>' if has_vid else '<img id="khushiMediaNormal" src="' + khushi_img + '" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />'}
+                
+                <!-- लिप्सिंग व वॉइस वेव इंडिकेटर -->
+                <div id="voiceWave" style="position:absolute; bottom:6px; left:50%; transform:translateX(-50%); display:none; gap:3px; align-items:flex-end; height:18px;">
+                    <div style="width:3px; height:8px; background:#00ff80; border-radius:2px; animation:waveBounce 0.5s infinite alternate;"></div>
+                    <div style="width:3px; height:16px; background:#00ff80; border-radius:2px; animation:waveBounce 0.3s infinite alternate;"></div>
+                    <div style="width:3px; height:10px; background:#00ff80; border-radius:2px; animation:waveBounce 0.4s infinite alternate;"></div>
+                </div>
             </div>
             
             <div style="display:flex; gap:5px; width:100%;">
@@ -140,13 +150,12 @@ st.components.v1.html(f"""
 
     <!-- ज़ूम स्थिति: 100vh Cinema Mode -->
     <div id="squareZoomOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#070913; z-index:999999; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; padding:15px;">
-        
         <button onclick="exitSquareZoom()" style="position:absolute; top:15px; right:15px; background:#ff4b4b; color:#fff; border:none; padding:9px 18px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.8);">
             ✕ सामान्य डिस्प्ले
         </button>
 
         <div style="width:85vw; max-width:380px; height:85vw; max-height:380px; background:#000; border:2px solid #00ff80; border-radius:14px; overflow:hidden; box-shadow:0 0 35px rgba(0,255,128,0.5); display:flex; align-items:center; justify-content:center;">
-            {media_tag_zoom}
+            {'<video id="khushiMediaZoom" src="' + khushi_video + '" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 15%;"></video>' if has_vid else '<img id="khushiMediaZoom" src="' + khushi_img + '" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />'}
         </div>
 
         <div style="display:flex; gap:12px; width:85vw; max-width:380px; margin-top:20px; align-items:center; justify-content:center;">
@@ -161,7 +170,8 @@ st.components.v1.html(f"""
 </div>
 
 <style>
-    @keyframes breathe {{ 0%{{transform:scale(1);}} 50%{{transform:scale(1.025) translateY(-1.5px);}} 100%{{transform:scale(1);}} }}
+    @keyframes breathe {{ 0%{{transform:scale(1);}} 50%{{transform:scale(1.02) translateY(-1px);}} 100%{{transform:scale(1);}} }}
+    @keyframes waveBounce {{ 0%{{height:4px;}} 100%{{height:18px;}} }}
 </style>
 
 <script>
@@ -174,41 +184,64 @@ st.components.v1.html(f"""
     const camPlaceholder = document.getElementById('camPlaceholderText');
     const camBtn = document.getElementById('camToggleBtn');
     const portraitFrame = document.getElementById('portraitFrame');
-    const vidNormal = document.getElementById('avatarVideoNormal');
-    const vidZoom = document.getElementById('avatarVideoZoom');
+    const voiceWave = document.getElementById('voiceWave');
+    
+    const mNorm = document.getElementById('khushiMediaNormal');
+    const mZoom = document.getElementById('khushiMediaZoom');
 
     let camStream = null;
 
-    // लिप-सिंक कंट्रोल (आवाज़ के साथ वीडियो प्ले/पॉज़)
-    function startLipSync() {{
-        if (vidNormal) {{ vidNormal.playbackRate = 1.1; vidNormal.play().catch(e=>{{}}); }}
-        if (vidZoom) {{ vidZoom.playbackRate = 1.1; vidZoom.play().catch(e=>{{}}); }}
+    // लिप-सिंक, बॉडी मोशन व हाव-भाव सिंक
+    function activateSpeakingState() {{
+        if (mNorm && mNorm.tagName === 'VIDEO') {{ mNorm.playbackRate = 1.0; mNorm.play().catch(e=>{{}}); }}
+        if (mZoom && mZoom.tagName === 'VIDEO') {{ mZoom.playbackRate = 1.0; mZoom.play().catch(e=>{{}}); }}
+        
+        // प्राकृतिक हेड टिल्ट व ग्लोइंग फ्रेम
+        portraitFrame.style.transform = 'scale(1.03) rotate(0.8deg)';
         portraitFrame.style.borderColor = '#00ff80';
         portraitFrame.style.boxShadow = '0 0 25px rgba(0,255,128,0.6)';
+        if (voiceWave) voiceWave.style.display = 'flex';
     }}
 
-    function stopLipSync() {{
-        if (vidNormal) {{ vidNormal.pause(); }}
-        if (vidZoom) {{ vidZoom.pause(); }}
+    function deactivateSpeakingState() {{
+        if (mNorm && mNorm.tagName === 'VIDEO') {{ mNorm.pause(); }}
+        if (mZoom && mZoom.tagName === 'VIDEO') {{ mZoom.pause(); }}
+        
+        portraitFrame.style.transform = 'scale(1) rotate(0deg)';
         portraitFrame.style.borderColor = '#ff4b4b';
         portraitFrame.style.boxShadow = '0 0 18px rgba(255,75,75,0.35)';
+        if (voiceWave) voiceWave.style.display = 'none';
     }}
 
-    // शुरुआत में वीडियो पॉज़ रहेगा ताकि जब तक बोले नहीं तब तक मुँह न हिले
-    window.addEventListener('load', () => {{
-        stopLipSync();
-    }});
+    // रीयल-टाइम जीरो-लैग ऑटो-स्पीक इंजन
+    const textToSpeak = "{clean_speak}";
+    if (textToSpeak && textToSpeak.length > 0) {{
+        const win = window.parent || window;
+        if ('speechSynthesis' in win) {{
+            win.speechSynthesis.cancel();
+            const utter = new win.SpeechSynthesisUtterance(textToSpeak);
+            utter.lang = 'hi-IN';
+            utter.rate = 1.0;
+            utter.pitch = 1.05;
 
-    // मैसेज लिस्नर (स्पीकर जब शुरू/खत्म होगा)
-    window.addEventListener('message', (event) => {{
-        if (event.data.type === 'START_SPEAKING') {{
-            startLipSync();
-        }} else if (event.data.type === 'STOP_SPEAKING') {{
-            stopLipSync();
+            utter.onstart = () => {{
+                activateSpeakingState();
+                micStatus.innerText = "खुशी बोल रही है... 🔊";
+            }};
+            utter.onend = () => {{
+                deactivateSpeakingState();
+                micStatus.innerText = "माइक व स्पीकर एक्टिव";
+            }};
+            utter.onerror = () => {{
+                deactivateSpeakingState();
+                micStatus.innerText = "माइक व स्पीकर एक्टिव";
+            }};
+
+            setTimeout(() => {{ win.speechSynthesis.speak(utter); }}, 100);
         }}
-    }});
+    }}
 
-    // 1. लाइव कैमरा
+    // 1. लाइव कैमरा टॉगल
     async function toggleInternalCam() {{
         if (camStream) {{
             camStream.getTracks().forEach(track => track.stop());
@@ -246,7 +279,7 @@ st.components.v1.html(f"""
         window.parent.location.href = url.toString();
     }}
 
-    // 3. Zoom
+    // 3. Zoom Toggle
     function enterSquareZoom() {{
         squareOverlay.style.display = 'flex';
         const pDoc = window.parent.document;
@@ -266,28 +299,19 @@ st.components.v1.html(f"""
         if (cCard) cCard.style.display = 'block';
     }}
 
-    // 4. Puss (तुरंत म्यूट और वीडियो शांत)
+    // 4. Puss (तुरंत म्यूट)
     function pussSpeech() {{
         try {{
-            window.speechSynthesis.cancel();
-            if (window.parent && window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
+            const win = window.parent || window;
+            if (win.speechSynthesis) win.speechSynthesis.cancel();
         }} catch(e) {{}}
-        stopLipSync();
+        deactivateSpeakingState();
         micStatus.innerText = 'शांत';
     }}
 
-    // 5. वॉयस इंजन (तुरंत रिस्पॉन्स)
+    // 5. वॉयस इंजन (Keep-Alive के साथ)
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || (window.parent && (window.parent.SpeechRecognition || window.parent.webkitSpeechRecognition));
     let rec = null;
-
-    function unlockAudioInstantly() {{
-        try {{
-            const win = window.parent || window;
-            const dummy = new win.SpeechSynthesisUtterance(" ");
-            dummy.volume = 0.01;
-            win.speechSynthesis.speak(dummy);
-        }} catch(e) {{}}
-    }}
 
     if (SpeechRec) {{
         rec = new SpeechRec();
@@ -320,7 +344,14 @@ st.components.v1.html(f"""
     }}
 
     function triggerMicVoice() {{
-        unlockAudioInstantly();
+        // ब्राउज़र ऑडियो को जगाए रखें (Never Sleeps)
+        try {{
+            const win = window.parent || window;
+            const keepAlive = new win.SpeechSynthesisUtterance(" ");
+            keepAlive.volume = 0.01;
+            win.speechSynthesis.speak(keepAlive);
+        }} catch(e) {{}}
+
         if (rec) {{
             try {{ rec.start(); }} catch(e) {{ rec.stop(); setTimeout(() => rec.start(), 200); }}
         }}
@@ -332,7 +363,7 @@ st.components.v1.html(f"""
 
 thinking_box = st.empty()
 
-# चैट संवाद व उत्तर कार्ड
+# 5. चैट संवाद व उत्तर कार्ड
 st.markdown('<div id="chatAnswerContainer">', unsafe_allow_html=True)
 for msg in st.session_state.messages[-2:]:
     if msg["role"] == "user":
@@ -346,11 +377,13 @@ for msg in st.session_state.messages[-2:]:
         """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# AI इंजन (Gemini 3.6 Flash)
+# 6. आधिकारिक Gemini 3.6 Flash इंजन
 def ask_gemini(prompt):
     if not client:
-        return "त्रुटि: GEMINI_API_KEY नहीं मिली।"
-    models_to_try = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-2.0-flash']
+        return "त्रुटि: GEMINI_API_KEY नहीं मिली। कृपया Secrets जाँचें।"
+    
+    # 3.6 Flash सक्रिय और प्राथमिक है
+    models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash-lite']
     for m in models_to_try:
         try:
             res = client.models.generate_content(
@@ -362,50 +395,10 @@ def ask_gemini(prompt):
                 return res.text
         except Exception:
             continue
+            
     return "माफ़ कीजिए, सर्वर व्यस्त है। कृपया पुनः पूछें।"
 
-# ज़ीरो-लैग रीयल-टाइम स्पीकर + लिप-सिंक ट्रिगर
-def speak(text):
-    clean = re.sub(r'[*#~`_+=|\\<>]', ' ', text).replace('"', '').replace("'", "")
-    st.components.v1.html(f"""
-    <script>
-        function triggerSpeech() {{
-            const win = window.parent || window;
-            if ('speechSynthesis' in win) {{
-                win.speechSynthesis.cancel();
-                const u = new win.SpeechSynthesisUtterance("{clean}");
-                u.lang = 'hi-IN';
-                u.rate = 1.0;
-                u.pitch = 1.05;
-
-                // लिप्सिंग शुरू: वीडियो प्ले
-                u.onstart = function() {{
-                    win.postMessage({{ type: 'START_SPEAKING' }}, '*');
-                    const iframes = win.document.querySelectorAll('iframe');
-                    iframes.forEach(f => {{ try {{ f.contentWindow.postMessage({{ type: 'START_SPEAKING' }}, '*'); }} catch(e){{}} }});
-                }};
-
-                // लिप्सिंग बंद: वीडियो शांत
-                u.onend = function() {{
-                    win.postMessage({{ type: 'STOP_SPEAKING' }}, '*');
-                    const iframes = win.document.querySelectorAll('iframe');
-                    iframes.forEach(f => {{ try {{ f.contentWindow.postMessage({{ type: 'STOP_SPEAKING' }}, '*'); }} catch(e){{}} }});
-                }};
-
-                u.onerror = function() {{
-                    win.postMessage({{ type: 'STOP_SPEAKING' }}, '*');
-                    const iframes = win.document.querySelectorAll('iframe');
-                    iframes.forEach(f => {{ try {{ f.contentWindow.postMessage({{ type: 'STOP_SPEAKING' }}, '*'); }} catch(e){{}} }});
-                }};
-
-                win.speechSynthesis.speak(u);
-            }}
-        }}
-        triggerSpeech();
-    </script>
-    """, height=0)
-
-# चैट इनपुट
+# 7. चैट इनपुट
 user_query = st.chat_input("यहाँ लिखें या ऊपर mike बटन दबाकर बोलें...")
 
 if user_query:
@@ -417,6 +410,5 @@ if user_query:
     save_mem()
     
     thinking_box.empty()
-    speak(ans)
     st.rerun()
-    
+            
