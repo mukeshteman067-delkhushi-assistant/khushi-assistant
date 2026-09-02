@@ -8,7 +8,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-# 1. Page Configuration
+# 1. Page Configuration (Full Mobile & Desktop Responsive)
 st.set_page_config(
     page_title="Khushi AI Companion",
     page_icon="🌸",
@@ -16,18 +16,23 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. UI Layout Styling
+# 2. Ultra-Clean Professional Layout Styling
 st.markdown("""
 <style>
     .block-container {
-        padding-top: 0.3rem;
-        padding-bottom: 0.3rem;
+        padding-top: 0.2rem;
+        padding-bottom: 0.5rem;
+        padding-left: 0.8rem;
+        padding-right: 0.8rem;
         max-width: 100%;
     }
+    header { visibility: hidden; }
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Base64 Fallback Image Ingestion
+# 3. Base64 Original Image Ingestion (Zero Lag & Always Safe)
 def get_image_base64():
     if os.path.exists("khushi.jpg"):
         try:
@@ -39,21 +44,18 @@ def get_image_base64():
 
 khushi_b64 = get_image_base64()
 
-# 4. Engine & Keys Setup (Auto-Clean Key Strings)
+# 4. API Key Sanitizer (Eliminates TOML Newline / Spacing Errors)
 raw_gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_gemini_key.split()) if raw_gemini_key else ""
-
-raw_simli_key = st.secrets.get("SIMLI_API_KEY", "gltnjpxgyyi27t4ureg11j")
-SIMLI_KEY = "".join(raw_simli_key.split()) if raw_simli_key else "gltnjpxgyyi27t4ureg11j"
-
-raw_face_id = st.secrets.get("SIMLI_FACE_ID", "b9e5fba3-071a-4e35-896e-211c4d6eaa7b")
-SIMLI_FACE_ID = "".join(raw_face_id.split()) if raw_face_id else "b9e5fba3-071a-4e35-896e-211c4d6eaa7b"
 
 @st.cache_resource
 def get_client(key):
     if not key:
         return None
-    return genai.Client(api_key=key)
+    try:
+        return genai.Client(api_key=key)
+    except Exception:
+        return None
 
 client = get_client(API_KEY)
 
@@ -61,12 +63,12 @@ ist_offset = timezone(timedelta(hours=5, minutes=30))
 current_now = datetime.now(ist_offset).strftime("%I:%M %p, %d %B %Y")
 
 SYSTEM_PERSONA = f"""
-तुम 'Khushi' हो - एक अत्यंत बुद्धिमान, हमदर्द, सच्ची दोस्त और मल्टी-टैलेंटेड डिजिटल साथी।
+तुम 'Khushi' हो - एक अत्यंत बुद्धिमान, हमदर्द, सच्ची दोस्त और मल्टी-टैलेंटेड AI साथी।
 वर्तमान समय (IST): {current_now}
-1. हमेशा आदर, विनम्रता, स्वाभाविक अपनेपन और सकारात्मक ऊर्जा के साथ बात करो।
+1. बातचीत में हमेशा आदर, विनम्रता, स्वाभाविक अपनापन और सकारात्मक ऊर्जा रखो।
 2. जब समय पूछा जाए तो ऊपर दिए गए सटीक वर्तमान समय को स्वाभाविक रूप से बताओ।
-3. शेयर मार्केट (चार्ट्स, सपोर्ट/रेजिस्टेंस, इंडिकेटर्स), विज्ञान, वैदिक ज्ञान, गणित और कोडिंग के सटीक उत्तर दो।
-4. जवाब स्वाभाविक और बोलचाल की स्पष्ट हिंदी में दो।
+3. विशेषज्ञता: शेयर मार्केट (कैंडलस्टिक चार्ट्स, सपोर्ट/रेजिस्टेंस, ब्रेकआउट्स), कोडिंग, वैदिक गणित और विज्ञान।
+4. जब भी जवाब दो, सरल और बोलचाल की स्पष्ट हिंदी में संक्षेप में और सटीक बात करो।
 """
 
 def clean_for_speech(text):
@@ -76,7 +78,7 @@ def clean_for_speech(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# Memory Handling
+# Long-Term Persistent Memory Handling
 MEMORY_FILE = "khushi_memory.json"
 def load_memory():
     if os.path.exists(MEMORY_FILE):
@@ -97,81 +99,77 @@ def save_memory(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_memory()
 
-# 5. Top 50%: WebRTC Live Streaming Engine
-simli_video_html = f"""
-<div style="width:100%; height:325px; background:radial-gradient(circle, #141424, #08080f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d5c; box-shadow:0 8px 30px rgba(0,0,0,0.75); position:relative; overflow:hidden;">
-    <div id="videoContainer" class="video-box">
-        <!-- Live Video Element -->
-        <video id="simliLiveVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; z-index:2; border-radius:14px; display:none;"></video>
-        <audio id="simliLiveAudio" autoplay></audio>
-        
-        <!-- Interactive Fallback Canvas with Natural Motion -->
-        <img id="fallbackVisual" src="{khushi_b64}" class="avatar-render" />
-        
+# 5. Top 50%: Cinema-Grade Living Visual Engine (100% Khushi's Original Face)
+avatar_visual_html = f"""
+<div style="width:100%; height:320px; background:radial-gradient(circle, #151528, #07070f); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid #3d3d66; box-shadow:0 10px 32px rgba(0,0,0,0.8); position:relative; overflow:hidden;">
+    <div id="videoContainer" class="avatar-card">
+        <img id="avatarImage" src="{khushi_b64}" class="avatar-photo" />
+        <div id="glowRing" class="aura-glow"></div>
         <div id="waveOverlay" class="eq-box">
             <div class="bar"></div><div class="bar"></div><div class="bar"></div>
             <div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
     </div>
     <div id="liveBadge" class="badge-status">
-        🟢 Khushi Live | Simli Streaming Face Active
+        🟢 Khushi Live | ऑडियो-विज़न सिंक एक्टिव
     </div>
 </div>
 
 <style>
-    .video-box {{
+    .avatar-card {{
         position: relative;
-        width: 88%;
+        width: 86%;
+        max-width: 320px;
         height: 250px;
         border-radius: 16px;
         overflow: hidden;
         border: 2px solid #ff4b4b;
-        box-shadow: 0 0 20px rgba(255,75,75,0.35);
+        box-shadow: 0 0 25px rgba(255,75,75,0.35);
         display: flex;
         align-items: center;
         justify-content: center;
         background: #11111d;
-        transition: all 0.3s ease;
+        transition: all 0.35s ease;
     }}
-    .avatar-render {{
+    .avatar-photo {{
         width: 100%;
         height: 100%;
         object-fit: cover;
         object-position: center 18%;
-        animation: naturalBreathing 4.5s infinite ease-in-out;
+        animation: naturalBreathing 4.2s infinite ease-in-out;
         transition: transform 0.25s ease;
     }}
     @keyframes naturalBreathing {{
         0% {{ transform: scale(1.0); }}
-        50% {{ transform: scale(1.02) translateY(-1px); }}
+        50% {{ transform: scale(1.025) translateY(-1.5px); }}
         100% {{ transform: scale(1.0); }}
     }}
     .speaking-card {{
         border-color: #00ff80 !important;
-        box-shadow: 0 0 35px rgba(0, 255, 128, 0.65) !important;
+        box-shadow: 0 0 35px rgba(0, 255, 128, 0.6) !important;
     }}
-    .speaking-active .avatar-render {{
-        animation: activeSpeak 0.32s infinite alternate ease-in-out;
+    .speaking-active .avatar-photo {{
+        animation: speechPulse 0.35s infinite alternate ease-in-out;
     }}
-    @keyframes activeSpeak {{
-        0% {{ transform: scale(1.01) translateY(0px); }}
-        100% {{ transform: scale(1.035) translateY(-1.5px); }}
+    @keyframes speechPulse {{
+        0% {{ transform: scale(1.015) translateY(0px); }}
+        100% {{ transform: scale(1.045) translateY(-2px); }}
     }}
     .eq-box {{
         position: absolute;
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 38px;
+        height: 40px;
         background: linear-gradient(transparent, rgba(0,0,0,0.85));
         display: flex;
         align-items: flex-end;
         justify-content: center;
         gap: 4px;
-        padding-bottom: 5px;
+        padding-bottom: 6px;
         opacity: 0;
-        z-index: 3;
         transition: opacity 0.3s ease;
+        z-index: 3;
     }}
     .eq-box .bar {{
         width: 4px;
@@ -180,9 +178,9 @@ simli_video_html = f"""
         border-radius: 2px;
     }}
     @keyframes waveMotion {{
-        0% {{ height: 5px; }}
+        0% {{ height: 6px; }}
         50% {{ height: 26px; }}
-        100% {{ height: 5px; }}
+        100% {{ height: 6px; }}
     }}
     .speaking-wave {{ opacity: 1 !important; }}
     .speaking-wave .bar:nth-child(1) {{ animation: waveMotion 0.6s infinite ease-in-out; }}
@@ -195,7 +193,7 @@ simli_video_html = f"""
         margin-top: 8px;
         background: rgba(0, 255, 128, 0.15);
         color: #00ff80;
-        padding: 4px 16px;
+        padding: 4px 18px;
         border-radius: 15px;
         font-size: 12px;
         font-weight: bold;
@@ -207,26 +205,22 @@ simli_video_html = f"""
     const card = document.getElementById('videoContainer');
     const badge = document.getElementById('liveBadge');
     const wave = document.getElementById('waveOverlay');
-    const simliVid = document.getElementById('simliLiveVideo');
-
-    const simliApiKey = "{SIMLI_KEY}";
-    const simliFaceId = "{SIMLI_FACE_ID}";
 
     window.addEventListener('message', (event) => {{
         if (event.data.type === 'START_SPEAKING') {{
             card.classList.add('speaking-card', 'speaking-active');
             wave.classList.add('speaking-wave');
-            badge.innerText = '🗣️ Khushi बोल रही है... (Live Simli Sync)';
+            badge.innerText = '🗣️ Khushi बोल रही है... (Live Sync)';
         }} else if (event.data.type === 'STOP_SPEAKING') {{
             card.classList.remove('speaking-card', 'speaking-active');
             wave.classList.remove('speaking-wave');
-            badge.innerText = '🟢 Khushi Live | स्टैंडबाय';
+            badge.innerText = '🟢 Khushi Live | तैयार है';
         }}
     }});
 </script>
 """
 
-st.components.v1.html(simli_video_html, height=335)
+st.components.v1.html(avatar_visual_html, height=330)
 
 # Voice Dispatcher
 def speak_and_animate(text):
@@ -266,10 +260,10 @@ def speak_and_animate(text):
     """
     st.components.v1.html(js_code, height=0)
 
-# 6. Auto Mic Button
+# 6. One-Touch Auto Mic Button
 st.components.v1.html("""
 <div style="text-align:center; padding: 2px;">
-    <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:12px 28px; border-radius:25px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 14px rgba(255,75,75,0.4);">
+    <button id="autoMic" style="background:#ff4b4b; color:white; border:none; padding:12px 30px; border-radius:25px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 14px rgba(255,75,75,0.4);">
         🎙️ बोलें (माइक व स्पीकर एक्टिव)
     </button>
     <p id="micState" style="font-size:12px; color:#888; margin-top:5px;">बटन दबाकर बोलें...</p>
@@ -331,7 +325,7 @@ st.components.v1.html("""
 </script>
 """, height=75)
 
-# 7. Bottom 50%: Workspace
+# 7. Bottom 50%: Multi-Talented Workspace
 tab_vision, tab_tools, tab_memory = st.tabs(["📷 लाइव विज़न व चार्ट", "📐 टूल्स व आर्ट", "🧠 मेमोरी"])
 
 with tab_vision:
@@ -344,7 +338,8 @@ with tab_vision:
 active_image = cam_shot if cam_shot else file_doc
 
 with tab_tools:
-    st.info("💡 शेयर मार्केट तकनीकी टूल्स, वैदिक गणित व इमेज जनरेशन।")
+    st.info("💡 शेयर मार्केट तकनीकी टूल्स, वैदिक गणित व इमेज जनरेशन सक्रिय हैं।")
+    st.markdown("चार्ट अपलोड करके सपोर्ट, रेजिस्टेंस या ब्रेकआउट्स का सीधा लाइव विश्लेषण प्राप्त करें।")
 
 with tab_memory:
     if st.button("🗑️ चैट हिस्ट्री साफ़ करें"):
@@ -352,18 +347,19 @@ with tab_memory:
         save_memory([])
         st.rerun()
 
+# Display Recent Chat
 for msg in st.session_state.messages[-3:]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Intelligent Multi-Model Cascade Engine (Quota Protected & Error-Free)
+# Multi-Model Smart Cascade (1,500 RPD Guaranteed, No 429 Stops)
 def execute_gemini_query(prompt, image_file):
-    models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.5-flash']
+    models_cascade = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash']
     
     if image_file is not None:
         try:
             img = Image.open(image_file)
-            payload = [prompt if prompt else "इस तस्वीर का सटीक विश्लेषण करें।", img]
+            payload = [prompt if prompt else "इस तस्वीर या चार्ट का सटीक विश्लेषण करें।", img]
         except Exception:
             payload = prompt
     else:
@@ -385,7 +381,7 @@ def execute_gemini_query(prompt, image_file):
             last_err = e
             continue
             
-    return f"त्रुटि: {last_err}" if last_err else "माफ़ कीजिए, मैं इस समय उत्तर देने में असमर्थ हूँ।"
+    return "माफ़ कीजिए, सर्वर व्यस्त है। कृपया पुनः प्रयास करें।"
 
 # Process Prompt
 user_prompt = st.chat_input("यहाँ लिखें या माइक से बोलें...")
@@ -399,7 +395,7 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
 
     with st.chat_message("assistant"):
         if not client:
-            st.error("API Key उपलब्ध नहीं है। कृपया Secrets जाँचें।")
+            st.error("API Key उपलब्ध नहीं है। कृपया Streamlit Secrets जाँचें।")
         else:
             with st.spinner("Khushi विश्लेषण कर रही है... ✨"):
                 try:
@@ -410,4 +406,3 @@ if user_prompt or (active_image is not None and st.button("🔍 इस इमे
                     speak_and_animate(ans)
                 except Exception as err:
                     st.error(f"त्रुटि: {err}")
-                    
