@@ -5,7 +5,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-# 1. पेज कॉन्फ़िगरेशन (डिज़ाइन 100% वही फ्रोज़न रहेगा)
+# 1. पेज कॉन्फ़िगरेशन
 st.set_page_config(page_title="Khushi AI", page_icon="🌸", layout="wide")
 
 st.markdown("""
@@ -13,9 +13,9 @@ st.markdown("""
     .block-container { padding: 0.2rem 0.4rem 4.5rem 0.4rem !important; max-width: 100% !important; }
     header, footer, #MainMenu { visibility: hidden !important; }
     
-    /* ऊपर दिखने वाला सर्चिंग/थिंकिंग स्टेटस बैज */
+    /* टॉप स्टेटस बार */
     .thinking-badge {
-        background: linear-gradient(90deg, rgba(0,255,128,0.15), rgba(56,189,248,0.15));
+        background: linear-gradient(90deg, rgba(0,255,128,0.2), rgba(56,189,248,0.2));
         border: 1px solid #00ff80;
         border-radius: 20px;
         padding: 6px 14px;
@@ -24,11 +24,11 @@ st.markdown("""
         font-weight: bold;
         text-align: center;
         margin: 6px 0;
-        animation: pulseBadge 1.5s infinite alternate ease-in-out;
+        animation: pulseBadge 1.2s infinite alternate ease-in-out;
     }
     @keyframes pulseBadge {
-        0% { opacity: 0.7; box-shadow: 0 0 5px rgba(0,255,128,0.2); }
-        100% { opacity: 1; box-shadow: 0 0 15px rgba(0,255,128,0.6); }
+        0% { opacity: 0.6; }
+        100% { opacity: 1; box-shadow: 0 0 14px rgba(0,255,128,0.7); }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -44,15 +44,15 @@ def get_khushi_b64():
 
 khushi_b64 = get_khushi_b64()
 
-# 3. Gemini Client Setup (सुपर-फ़ास्ट रिस्पॉन्स)
+# 3. Gemini 3.6 Flash Client Setup
 raw_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
-PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल, सटीक और सीधे हिंदी में तुरंत उत्तर दो।"
+PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल, सटीक और स्पष्ट हिंदी में उत्तर दो।"
 
-# मेमोरी प्रबंधन
+# मेमोरी व स्टेट्स
 if "messages" not in st.session_state:
     if os.path.exists("khushi_memory.json"):
         try:
@@ -67,14 +67,31 @@ def save_mem():
             json.dump(st.session_state.messages, f, ensure_ascii=False)
     except Exception: pass
 
-# 4. फ्रोज़न लेआउट: बायाँ 52% पोर्ट्रेट + दायाँ स्विचेस + 100vh ज़ूम सिनेमा
+# स्टेटस फ्लैग्स (शुरुआत में सब कुछ 100% बंद रहेगा)
+if "show_cam" not in st.session_state: st.session_state.show_cam = False
+if "show_set" not in st.session_state: st.session_state.show_set = False
+
+# URL से टॉगल स्वीकार करें
+qp = st.query_params.get("action", "")
+if qp == "cam":
+    st.session_state.show_cam = not st.session_state.show_cam
+    st.session_state.show_set = False
+    st.query_params.clear()
+    st.rerun()
+elif qp == "set":
+    st.session_state.show_set = not st.session_state.show_set
+    st.session_state.show_cam = False
+    st.query_params.clear()
+    st.rerun()
+
+# 4. फ्रोज़न लेआउट: बायाँ 52% पोर्ट्रेट + दायाँ स्विचेस + 1:1 स्क्वायर ज़ूम
 st.components.v1.html(f"""
 <div id="masterBoard" style="width:100%; box-sizing:border-box; background:#0a0c16; padding:8px; border-radius:14px; border:1px solid #1e2640; position:relative; overflow:hidden;">
     
-    <!-- मुख्य ग्रिड: बायाँ पोर्ट्रेट + दायाँ स्विचेस (Exact Look) -->
+    <!-- मुख्य सामान्य ग्रिड: बायाँ पोर्ट्रेट + दायाँ स्विचेस -->
     <div id="standardGrid" style="display:flex; width:100%; gap:8px;">
         
-        <!-- बायाँ 52%: पोर्ट्रेट विज़ुअल + Puss & Zoom नीचे -->
+        <!-- बायाँ 52%: पोर्ट्रेट विज़ुअल + Puss & Zoom ठीक नीचे -->
         <div style="width:52%; display:flex; flex-direction:column; gap:6px;">
             <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35);">
                 <img id="avatarPic" src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />
@@ -90,12 +107,14 @@ st.components.v1.html(f"""
             </div>
         </div>
 
-        <!-- दायाँ 48%: स्विचेस (कैमरा ऑन-ऑफ, माइक-स्पीकर, सेटिंग) -->
+        <!-- दायाँ 48%: स्विचेस (कैमरा, माइक, सेटिंग) -->
         <div id="switchesPanel" style="width:48%; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
-            <button onclick="toggleSection('cameraContainerBox')" style="width:100%; background:#221b0e; color:#facc15; border:1px solid #ca8a04; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
+            <!-- 1. कैमरा ON - OFF स्विच -->
+            <button onclick="navAction('cam')" style="width:100%; background:#221b0e; color:#facc15; border:1px solid #ca8a04; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
                 📷 कैमरा on — off
             </button>
 
+            <!-- 2. mike - spiker (बोलने के लिए) -->
             <div style="display:flex; flex-direction:column; align-items:center;">
                 <button id="micBtn" style="width:100%; background:#ff4b4b; color:white; border:none; padding:15px 2px; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(255,75,75,0.45);">
                     🎙️ mike - spiker (बोलें)
@@ -103,26 +122,24 @@ st.components.v1.html(f"""
                 <span id="micStatus" style="font-size:10px; color:#9ca3af; margin-top:4px;">माइक व स्पीकर एक्टिव</span>
             </div>
 
-            <button onclick="toggleSection('settingsContainerBox')" style="width:100%; background:#1c172d; color:#c084fc; border:1px solid #9333ea; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
+            <!-- 3. सेटिंग स्विच -->
+            <button onclick="navAction('set')" style="width:100%; background:#1c172d; color:#c084fc; border:1px solid #9333ea; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
                 ⚙️ सेटिंग
             </button>
         </div>
     </div>
 
-    <!-- ज़ूम स्थिति: 100vh Full Screen Cinema (कोई खाली सफ़ेद जगह नहीं रहेगी) -->
+    <!-- ज़ूम स्थिति: 100vh Cinema Mode (सारे स्विच व खाली जगह गायब) -->
     <div id="squareZoomOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#070913; z-index:999999; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; padding:15px;">
         
-        <!-- टॉप क्लोज बटन -->
         <button onclick="exitSquareZoom()" style="position:absolute; top:15px; right:15px; background:#ff4b4b; color:#fff; border:none; padding:9px 18px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.8);">
             ✕ सामान्य डिस्प्ले
         </button>
 
-        <!-- मध्य में 1:1 स्क्वायर चौकोर फ्रेम -->
         <div style="width:85vw; max-width:380px; height:85vw; max-height:380px; background:#000; border:2px solid #00ff80; border-radius:14px; overflow:hidden; box-shadow:0 0 35px rgba(0,255,128,0.5); display:flex; align-items:center; justify-content:center;">
             <img src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />
         </div>
 
-        <!-- नीचे केवल 2 कंट्रोल्स: 🛑 Puss और 🎙️ बोलिए -->
         <div style="display:flex; gap:12px; width:85vw; max-width:380px; margin-top:20px; align-items:center; justify-content:center;">
             <button onclick="pussSpeech()" style="background:#451212; color:#ff6b6b; border:1px solid #ff4b4b; padding:12px 18px; border-radius:25px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.6);">
                 🛑 Puss
@@ -165,29 +182,18 @@ st.components.v1.html(f"""
     function pussSpeech() {{
         try {{
             window.speechSynthesis.cancel();
-            if (window.parent && window.parent.speechSynthesis) {{
-                window.parent.speechSynthesis.cancel();
-            }}
+            if (window.parent && window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
         }} catch(e) {{}}
         micStatus.innerText = 'शांत';
     }}
 
-    // कैमरा और सेटिंग सेक्शन को स्मूथली टॉगल करने का फंक्शन
-    function toggleSection(secId) {{
-        const pDoc = window.parent.document;
-        const target = pDoc.getElementById(secId);
-        const otherId = secId === 'cameraContainerBox' ? 'settingsContainerBox' : 'cameraContainerBox';
-        const other = pDoc.getElementById(otherId);
-        if (other) other.style.display = 'none';
-        
-        if (target) {{
-            const isHidden = target.style.display === 'none' || target.style.display === '';
-            target.style.display = isHidden ? 'block' : 'none';
-            if (isHidden) target.scrollIntoView({{ behavior: 'smooth' }});
-        }}
+    function navAction(act) {{
+        const url = new URL(window.parent.location.href);
+        url.searchParams.set('action', act);
+        window.parent.location.href = url.toString();
     }}
 
-    // वॉयस इंजन
+    // 100% एक्टिव वॉयस इंजन
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || (window.parent && (window.parent.SpeechRecognition || window.parent.webkitSpeechRecognition));
     let rec = null;
     if (SpeechRec) {{
@@ -232,35 +238,37 @@ st.components.v1.html(f"""
 </script>
 """, height=385)
 
-# नंबर 4: सर्चिंग/थिंकिंग स्टेटस के लिए शीर्ष प्लेसहोल्डर (अब कभी नीचे नहीं छुपेगा)
-thinking_placeholder = st.empty()
+# नंबर 4: सर्चिंग/थिंकिंग स्टेटस ऊपर ही रहेगा
+thinking_box = st.empty()
 
-# नंबर 1: कैमरा ऑन-ऑफ करने पर वास्तविक कैमरा व अपलोडर खुलना
-st.markdown('<div id="cameraContainerBox" style="display:none; background:#141724; padding:10px; border-radius:10px; margin:6px 0; border:1px solid #ca8a04;">', unsafe_allow_html=True)
-st.markdown("<span style='color:#facc15; font-size:12px; font-weight:bold;'>📷 कैमरा व स्कैनर (फ़ोटो खींचें या चार्ट चुनें):</span>", unsafe_allow_html=True)
-col_cam1, col_cam2 = st.columns(2)
-with col_cam1:
-    cam_shot = st.camera_input("कैमरा स्कैन", label_visibility="collapsed")
-with col_cam2:
-    file_doc = st.file_uploader("चार्ट अपलोड", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-active_image = cam_shot if cam_shot else file_doc
-st.markdown('</div>', unsafe_allow_html=True)
+# नंबर 1: कैमरा ऑन-ऑफ (जब तक बटन नहीं दबेगा, कोड 0% रेंडर होगा - शून्य खाली पट्टी)
+active_image = None
+if st.session_state.show_cam:
+    st.markdown('<div style="background:#141724; padding:10px; border-radius:10px; margin:6px 0; border:1px solid #ca8a04;">', unsafe_allow_html=True)
+    st.markdown("<span style='color:#facc15; font-size:12px; font-weight:bold;'>📷 कैमरा व स्कैनर एक्टिव है (बंद करने के लिए पुनः स्विच दबाएँ):</span>", unsafe_allow_html=True)
+    col_c1, col_c2 = st.columns(2)
+    with col_c1: cam_shot = st.camera_input("कैमरा स्कैन", label_visibility="collapsed")
+    with col_c2: file_doc = st.file_uploader("चार्ट अपलोड", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+    active_image = cam_shot if cam_shot else file_doc
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# नंबर 2: सेटिंग ऑन-ऑफ करने पर वास्तविक सेटिंग्स व टूल्स खुलना
-st.markdown('<div id="settingsContainerBox" style="display:none; background:#181628; padding:12px; border-radius:10px; margin:6px 0; border:1px solid #9333ea;">', unsafe_allow_html=True)
-st.markdown("<b style='color:#c084fc; font-size:13px;'>⚙️ सिस्टम सेटिंग्स व टूल्स:</b>", unsafe_allow_html=True)
-col_s1, col_s2 = st.columns(2)
-with col_s1:
-    if st.button("🗑️ चैट मेमोरी साफ़ करें", use_container_width=True):
-        st.session_state.messages = []
-        save_mem()
-        st.success("मेमोरी साफ़ हो गई!")
-        st.rerun()
-with col_s2:
-    if st.button("🔄 सिस्टम रीफ्रेश", use_container_width=True):
-        st.rerun()
-st.caption("🟢 एक्टिव AI मॉडल: **Gemini 3.6 Flash** (सुपर-फ़ास्ट टर्बो)")
-st.markdown('</div>', unsafe_allow_html=True)
+# नंबर 2: सेटिंग्स (जब तक बटन नहीं दबेगा, कोड 0% रेंडर होगा)
+if st.session_state.show_set:
+    st.markdown('<div style="background:#181628; padding:12px; border-radius:10px; margin:6px 0; border:1px solid #9333ea;">', unsafe_allow_html=True)
+    st.markdown("<b style='color:#c084fc; font-size:13px;'>⚙️ सिस्टम सेटिंग्स व टूल्स:</b>", unsafe_allow_html=True)
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        if st.button("🗑️ चैट मेमोरी साफ़ करें", use_container_width=True):
+            st.session_state.messages = []
+            save_mem()
+            st.success("मेमोरी साफ़ हो गई!")
+            st.rerun()
+    with col_s2:
+        if st.button("✕ सेटिंग्स बंद करें", use_container_width=True):
+            st.session_state.show_set = False
+            st.rerun()
+    st.caption("🟢 एक्टिव AI मॉडल: **Gemini 3.6 Flash** (सुपर-फ़ास्ट टर्बो)")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # 5. चैट संवाद व उत्तर कार्ड
 st.markdown('<div id="chatAnswerContainer">', unsafe_allow_html=True)
@@ -281,8 +289,7 @@ def ask_gemini(prompt, img):
     if not client:
         return "त्रुटि: GEMINI_API_KEY नहीं मिली।"
     
-    # सबसे तेज और सक्रिय मॉडल
-    models_to_try = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-2.0-flash']
+    models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash']
     contents_payload = [prompt, Image.open(img)] if img else prompt
     
     for m in models_to_try:
@@ -323,14 +330,14 @@ if user_query or (active_image and st.button("🔍 इस फ़ोटो का
     q = user_query if user_query else "कृपया इस तस्वीर का विश्लेषण करें।"
     st.session_state.messages.append({"role": "user", "content": q})
     
-    # नंबर 4: सर्चिंग आइकॉन अब सीधे ऊपर दिखेगा (नीचे नहीं छुपेगा)
-    thinking_placeholder.markdown('<div class="thinking-badge">✨ खुशी सोच रही है... उत्तर आ रहा है ⚡</div>', unsafe_allow_html=True)
+    # नंबर 4: सर्चिंग स्टेटस सीधे ऊपर दिखेगा
+    thinking_box.markdown('<div class="thinking-badge">✨ खुशी सोच रही है... उत्तर आ रहा है ⚡</div>', unsafe_allow_html=True)
     
     ans = ask_gemini(q, active_image)
     st.session_state.messages.append({"role": "assistant", "content": ans})
     save_mem()
     
-    thinking_placeholder.empty()
+    thinking_box.empty()
     speak(ans)
     st.rerun()
     
