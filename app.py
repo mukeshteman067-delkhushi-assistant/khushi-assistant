@@ -73,7 +73,7 @@ API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
-PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल और सजीव हिंदी में 2 पंक्तियों में तुरंत उत्तर दो।"
+PERSONA = f"तुम 'Khushi' हो विनम्र, हमदर्द, बुद्धिमान, कोडिंग एक्सपर्ट, ईमानदार और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल और सजीव हिंदी में 2 पंक्तियों में तुरंत उत्तर दो।"
 
 # 4. स्टेट मैनेजमेंट
 if "messages" not in st.session_state:
@@ -104,8 +104,8 @@ clean_speak = re.sub(r'[*#~`_+=|\\<>]', ' ', last_answer).replace('"', ' ').repl
 if st.session_state.is_zoom:
     # 1:1 स्क्वायर ज़ूम सिनेमाई डिस्प्ले
     st.markdown(f"""
-    <div style="width:100%; min-height:85vh; background:#070913; border-radius:14px; border:2px solid #00ff80; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:15px; box-sizing:border-box;">
-        <div style="width:280px; height:280px; border-radius:14px; overflow:hidden; border:2px solid #00ff80; box-shadow:0 0 30px rgba(0,255,128,0.4); margin-bottom:20px;">
+    <div style="width:100%; min-height:85vh; background:#070913; border-radius:8px; border:2px solid #00ff80; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:15px; box-sizing:border-box;">
+        <div style="width:280px; height:350px; border-radius:8px; overflow:hidden; border:2px solid #00ff80; box-shadow:0 0 30px rgba(0,255,128,0.4); margin-bottom:20px;">
             {'<video src="' + media_src + '" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover;" />'}
         </div>
     </div>
