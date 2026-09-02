@@ -10,7 +10,7 @@ st.set_page_config(page_title="Khushi AI", page_icon="🌸", layout="wide")
 
 st.markdown("""
 <style>
-    .block-container { padding: 0.2rem 0.4rem 4rem 0.4rem !important; max-width: 100% !important; }
+    .block-container { padding: 0.2rem 0.4rem 4.5rem 0.4rem !important; max-width: 100% !important; }
     header, footer, #MainMenu { visibility: hidden !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -26,7 +26,7 @@ def get_khushi_b64():
 
 khushi_b64 = get_khushi_b64()
 
-# 3. Gemini 3.6 Client Setup
+# 3. Gemini 3.6 Flash Client
 raw_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
@@ -34,7 +34,7 @@ client = genai.Client(api_key=API_KEY) if API_KEY else None
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
 PERSONA = f"तुम 'Khushi' हो - हमदर्द, बुद्धिमान और सच्ची AI दोस्त। समय (IST): {ist_now}। शेयर बाजार, कोडिंग, विज्ञान और सामान्य प्रश्नों के सरल, संक्षिप्त व स्पष्ट हिंदी में उत्तर दो।"
 
-# सेशन स्टेट प्रबंधन
+# सेशन व मेमोरी
 if "messages" not in st.session_state:
     if os.path.exists("khushi_memory.json"):
         try:
@@ -49,17 +49,17 @@ def save_mem():
             json.dump(st.session_state.messages, f, ensure_ascii=False)
     except Exception: pass
 
-if "active_panel" not in st.session_state:
-    st.session_state.active_panel = None  # कोई भी फालतू बॉक्स डिफ़ॉल्ट रूप से लोड नहीं होगा
+# URL Query Params के जरिए पायथन स्तर पर पैनल का शुद्ध ऑन-डिमांड नियंत्रण
+current_panel = st.query_params.get("panel", "")
 
-# 4. स्केच अनुसार मुख्य डिस्प्ले: बायाँ पोर्ट्रेट + दायाँ स्विचेस + स्क्वायर ज़ूम
+# 4. मुख्य डिस्प्ले: बायाँ 52% पोर्ट्रेट + दायाँ स्विचेस + 1:1 स्क्वायर ज़ूम
 st.components.v1.html(f"""
 <div id="masterBoard" style="width:100%; box-sizing:border-box; background:#0a0c16; padding:8px; border-radius:14px; border:1px solid #1e2640; position:relative; overflow:hidden;">
     
     <!-- सामान्य दृश्य: बायाँ पोर्ट्रेट + दायाँ स्विचेस -->
     <div id="standardGrid" style="display:flex; width:100%; gap:8px;">
         
-        <!-- बायाँ हिस्सा: पोर्ट्रेट विज़ुअल + Puss & Zoom ठीक नीचे -->
+        <!-- बायाँ 52%: पोर्ट्रेट विज़ुअल + Puss & Zoom नीचे -->
         <div style="width:52%; display:flex; flex-direction:column; gap:6px;">
             <div id="portraitFrame" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:all 0.35s ease;">
                 <img id="avatarPic" src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:center 12%; animation:breathe 4s infinite ease-in-out;" />
@@ -75,10 +75,10 @@ st.components.v1.html(f"""
             </div>
         </div>
 
-        <!-- दायाँ हिस्सा: स्विचेस (कैमरा ऑन-ऑफ, माइक-स्पीकर, सेटिंग) -->
+        <!-- दायाँ 48%: स्विचेस (कैमरा ऑन-ऑफ, माइक-स्पीकर, सेटिंग) -->
         <div id="switchesPanel" style="width:48%; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
             <!-- 1. कैमरा ON - OFF स्विच -->
-            <button onclick="triggerAction('toggle_camera')" style="width:100%; background:#221b0e; color:#facc15; border:1px solid #ca8a04; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
+            <button onclick="togglePanel('camera')" style="width:100%; background:#221b0e; color:#facc15; border:1px solid #ca8a04; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
                 📷 कैमरा on — off
             </button>
 
@@ -91,31 +91,31 @@ st.components.v1.html(f"""
             </div>
 
             <!-- 3. सेटिंग स्विच -->
-            <button onclick="triggerAction('toggle_settings')" style="width:100%; background:#1c172d; color:#c084fc; border:1px solid #9333ea; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
+            <button onclick="togglePanel('settings')" style="width:100%; background:#1c172d; color:#c084fc; border:1px solid #9333ea; padding:12px 2px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer;">
                 ⚙️ सेटिंग
             </button>
         </div>
     </div>
 
-    <!-- ज़ूम स्थिति: संपूर्ण Square काले घेरे में विज़ुअल (सारे स्विच व कीपैड गायब) -->
-    <div id="squareZoomOverlay" style="display:none; width:100%; height:480px; position:relative; background:#000; border-radius:14px; overflow:hidden; border:2px solid #00ff80; box-shadow:0 0 30px rgba(0,255,128,0.5);">
+    <!-- ज़ूम स्थिति: संपूर्ण Square (1:1) काले घेरे में विज़ुअल (सारे स्विच व कीपैड गायब) -->
+    <div id="squareZoomOverlay" style="display:none; width:100%; height:490px; position:relative; background:#000; border-radius:14px; overflow:hidden; border:2px solid #00ff80; box-shadow:0 0 30px rgba(0,255,128,0.5);">
         
-        <!-- संपूर्ण Square काले घेरे में खुशी का विज़ुअल -->
-        <div style="width:100%; height:380px; display:flex; justify-content:center; align-items:center; background:#000; overflow:hidden;">
-            <img src="{khushi_b64}" style="width:380px; height:380px; object-fit:cover; object-position:center 15%; border-radius:12px;" />
+        <!-- संपूर्ण Square (1:1) काले घेरे में खुशी का विज़ुअल -->
+        <div style="width:100%; height:390px; display:flex; justify-content:center; align-items:center; background:#000; overflow:hidden;">
+            <img src="{khushi_b64}" style="width:380px; height:380px; object-fit:cover; object-position:center 15%; border-radius:14px;" />
         </div>
         
-        <!-- ज़ूम आउट बटन -->
-        <button onclick="exitSquareZoom()" style="position:absolute; top:12px; right:12px; z-index:100; background:#ff4b4b; color:#fff; border:none; padding:8px 16px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer;">
+        <!-- ज़ूम आउट (सामान्य स्थिति में वापसी) बटन -->
+        <button onclick="exitSquareZoom()" style="position:absolute; top:12px; right:12px; z-index:100; background:#ff4b4b; color:#fff; border:none; padding:8px 16px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.7);">
             ✕ सामान्य डिस्प्ले
         </button>
 
-        <!-- ज़ूम में केवल 2 चीजें: Puss और माइक-स्पीकर -->
+        <!-- ज़ूम में केवल 2 कंट्रोल्स: 🛑 Puss और 🎙️ माइक-स्पीकर -->
         <div style="position:absolute; bottom:12px; left:0; width:100%; display:flex; justify-content:center; align-items:center; gap:12px; z-index:100; padding:0 10px; box-sizing:border-box;">
-            <button onclick="pussSpeech()" style="background:#451212; color:#ff6b6b; border:1px solid #ff4b4b; padding:12px 18px; border-radius:25px; font-weight:bold; font-size:13px; cursor:pointer;">
+            <button onclick="pussSpeech()" style="background:#451212; color:#ff6b6b; border:1px solid #ff4b4b; padding:12px 18px; border-radius:25px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.6);">
                 🛑 Puss (रोकें)
             </button>
-            <button onclick="triggerMicVoice()" style="flex:1; max-width:260px; background:linear-gradient(90deg, #10b981, #059669); color:#fff; border:none; padding:12px 16px; border-radius:25px; font-weight:bold; font-size:13.5px; cursor:pointer;">
+            <button onclick="triggerMicVoice()" style="flex:1; max-width:260px; background:linear-gradient(90deg, #10b981, #059669); color:#fff; border:none; padding:12px 16px; border-radius:25px; font-weight:bold; font-size:13.5px; cursor:pointer; box-shadow:0 4px 15px rgba(0,255,128,0.3);">
                 🎙️ बोलिए (माइक व स्पीकर चालू)
             </button>
         </div>
@@ -160,9 +160,16 @@ st.components.v1.html(f"""
         micStatus.innerText = 'शांत';
     }}
 
-    function triggerAction(actionType) {{
-        const btn = window.parent.document.querySelector(`button[data-testid="${{actionType}}"]`);
-        if (btn) btn.click();
+    // URL Query Params के जरिए पैनल टॉगल (बिना किसी डमी बटन के)
+    function togglePanel(panelName) {{
+        const url = new URL(window.parent.location.href);
+        const current = url.searchParams.get('panel');
+        if (current === panelName) {{
+            url.searchParams.delete('panel');
+        }} else {{
+            url.searchParams.set('panel', panelName);
+        }}
+        window.parent.location.href = url.toString();
     }}
 
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -199,21 +206,11 @@ st.components.v1.html(f"""
 </script>
 """, height=385)
 
-# अदृश्य ट्रिगर बटन्स (यह स्क्रीन पर 0px लेते हैं)
-st.markdown('<div style="display:none;">', unsafe_allow_html=True)
-if st.button("CamToggle", key="toggle_camera"):
-    st.session_state.active_panel = "camera" if st.session_state.active_panel != "camera" else None
-    st.rerun()
-
-if st.button("SettingsToggle", key="toggle_settings"):
-    st.session_state.active_panel = "settings" if st.session_state.active_panel != "settings" else None
-    st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
-
-# 5. केवल और केवल ऑन-डिमांड एक्टिवेट होने वाले बॉक्स (अन्यथा कोड रेंडर ही नहीं करेगा)
+# 5. पायथन स्तर पर 100% ऑन-डिमांड ब्लॉक्स (जब तक स्विच चालू न हो, कोड में लोड ही नहीं होंगे)
 active_image = None
-if st.session_state.active_panel == "camera":
-    st.markdown('<div style="background:#141724; padding:8px; border-radius:10px; margin:6px 0; border:1px solid #ca8a04;">', unsafe_allow_html=True)
+
+if current_panel == "camera":
+    st.markdown('<div style="background:#141724; padding:10px; border-radius:10px; margin:6px 0; border:1px solid #ca8a04;">', unsafe_allow_html=True)
     st.markdown("<span style='color:#facc15; font-size:12px; font-weight:bold;'>📷 कैमरा सक्रिय है (बंद करने के लिए पुनः स्विच दबाएँ):</span>", unsafe_allow_html=True)
     col_c1, col_c2 = st.columns(2)
     with col_c1: cam_shot = st.camera_input("कैमरा", label_visibility="collapsed")
@@ -221,19 +218,19 @@ if st.session_state.active_panel == "camera":
     active_image = cam_shot if cam_shot else file_doc
     st.markdown('</div>', unsafe_allow_html=True)
 
-elif st.session_state.active_panel == "settings":
+elif current_panel == "settings":
     st.markdown('<div style="background:#181628; padding:12px; border-radius:10px; margin:6px 0; border:1px solid #9333ea;">', unsafe_allow_html=True)
-    st.markdown("<b style='color:#c084fc; font-size:13px;'>⚙️ सिस्टम सेटिंग्स व टूल्स:</b>", unsafe_allow_html=True)
+    st.markdown("<b style='color:#c084fc; font-size:13px;'>⚙️ सिस्टम सेटिंग्स:</b>", unsafe_allow_html=True)
     col_s1, col_s2 = st.columns(2)
     with col_s1:
         if st.button("🗑️ चैट हिस्ट्री साफ़ करें", use_container_width=True):
             st.session_state.messages = []
             save_mem()
-            st.session_state.active_panel = None
+            st.query_params.clear()
             st.rerun()
     with col_s2:
         if st.button("✕ सेटिंग्स बंद करें", use_container_width=True):
-            st.session_state.active_panel = None
+            st.query_params.clear()
             st.rerun()
     st.caption("🟢 एक्टिव मॉडल: **Gemini 3.6 Flash**")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -257,7 +254,7 @@ def ask_gemini(prompt, img):
     if not client:
         return "त्रुटि: GEMINI_API_KEY नहीं मिली। कृपया Secrets जाँचें।"
     
-    models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash-lite']
+    models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash']
     contents_payload = [prompt, Image.open(img)] if img else prompt
     
     for m in models_to_try:
@@ -300,3 +297,4 @@ if user_query or (active_image and st.button("🔍 इस फ़ोटो का
         save_mem()
         speak(ans)
         st.rerun()
+        
