@@ -10,7 +10,7 @@ import ui_layout
 st.set_page_config(page_title="Khushi AI", page_icon="🌸", layout="wide")
 ui_layout.apply_custom_css()
 
-# खुशी MP4 वीडियो या फ़ोटो लोडर
+# खुशी MP4 या फ़ोटो लोडर
 def get_khushi_assets():
     has_vid = os.path.exists("khushi.mp4")
     v_b64, img_b64 = "", ""
@@ -65,6 +65,7 @@ if st.session_state.is_zoom:
 else:
     ui_layout.render_standard_mode(media_src, has_vid, save_mem)
 
+# ऑडियो इंजन (लाइन 68 - अब ui_layout से 100% कनेक्टेड)
 ui_layout.play_audio_engine(st.session_state.clean_speak)
 
 thinking_box = st.empty()
@@ -107,7 +108,7 @@ def ask_gemini_vision(prompt=None, pil_image=None):
             continue
     return "माफ़ कीजिए, सर्वर व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।"
 
-# सुरक्षित कैमरा विज़न प्रोसेसिंग (एक बार प्रोसेस, नो लूप)
+# कैमरा विज़न प्रोसेसिंग (एक बार प्रोसेस, नो इनफिनिट लूप)
 cam_picture = st.session_state.get("in_cam")
 if cam_picture:
     current_cam_id = f"{cam_picture.name}_{cam_picture.size}"
