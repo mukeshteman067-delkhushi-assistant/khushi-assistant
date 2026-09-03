@@ -281,4 +281,3 @@ if user_query:
     
     thinking_box.empty()
     st.rerun()
- 
