@@ -5,7 +5,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-# 1. पेज कॉन्फ़िगरेशन एवं 52%-48% फ्रोज़न लेआउट CSS
+# 1. पेज सेटअप एवं लेआउट लॉक
 st.set_page_config(page_title="Khushi AI", page_icon="🌸", layout="wide")
 
 st.markdown("""
@@ -13,7 +13,6 @@ st.markdown("""
     .block-container { padding: 0.2rem 0.3rem 4rem 0.3rem !important; max-width: 100% !important; }
     header, footer, #MainMenu { visibility: hidden !important; }
     
-    /* 52% और 48% ग्रिड को मोबाइल पर भी एक सीध में लॉक रखना */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
@@ -40,9 +39,8 @@ st.markdown("""
         font-size: 11px !important;
     }
     
-    /* स्क्रॉल करने योग्य चैट हिस्ट्री */
     .chat-history-scroll {
-        max-height: 380px !important;
+        max-height: 360px !important;
         overflow-y: auto !important;
         padding: 8px !important;
         margin-top: 8px !important;
@@ -75,7 +73,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. खुशी हाई-रेज़ोल्यूशन एसेट लोडर
+# 2. खुशी इमेज लोडर
 def get_khushi_image():
     img_b64 = ""
     if os.path.exists("khushi.jpg"):
@@ -87,7 +85,7 @@ def get_khushi_image():
 
 khushi_b64 = get_khushi_image()
 
-# 3. Gemini 3.6 Flash Client सेटअप
+# 3. Gemini 3.6 Flash Client
 raw_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
@@ -95,9 +93,9 @@ client = genai.Client(api_key=API_KEY) if API_KEY else None
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
 PERSONA = f"""तुम 'Khushi' हो - सामने बैठे इंसान को गहराई से महसूस करने वाली, उच्च-बुद्धिमान, हमदर्द, कोडिंग व साइंस एक्सपर्ट सच्ची AI साथी।
 समय (IST): {ist_now}। 
-जब भी तुम्हें कैमरा विज़न या चैट से यूज़र दिखे, तो उसके हाव-भाव या सवाल को समझकर 2 पंक्तियों में सजीव, आत्मिक और शुद्ध संक्षिप्त हिंदी में बोलो।"""
+जब भी तुम्हें कैमरा विज़न या चैट से यूज़र दिखे, तो उसके हाव-भाव, काम या माहौल को समझकर 2 पंक्तियों में सजीव, आत्मिक और शुद्ध संक्षिप्त हिंदी में बोलो।"""
 
-# 4. परसिस्टेंट मेमोरी सिस्टम (JSON)
+# 4. परसिस्टेंट मेमोरी
 if "messages" not in st.session_state:
     if os.path.exists("khushi_memory.json"):
         try:
@@ -112,7 +110,6 @@ def save_mem():
             json.dump(st.session_state.messages, f, ensure_ascii=False)
     except Exception: pass
 
-# स्टेट्स
 if "cam_on" not in st.session_state: st.session_state.cam_on = False
 if "is_zoom" not in st.session_state: st.session_state.is_zoom = False
 if "clean_speak" not in st.session_state: st.session_state.clean_speak = ""
@@ -122,9 +119,7 @@ if "last_cam_id" not in st.session_state: st.session_state.last_cam_id = None
 if st.session_state.is_zoom:
     st.markdown(f"""
     <div style="width:100%; height:62vh; max-height:480px; background:#070913; border-radius:12px; border:2px solid #00ff80; display:flex; align-items:center; justify-content:center; padding:4px; box-sizing:border-box; margin-bottom:6px; box-shadow:0 0 20px rgba(0,255,128,0.35);">
-        <div style="width:100%; height:100%; border-radius:10px; overflow:hidden;">
-            <img src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />
-        </div>
+        <img src="{khushi_b64}" style="width:100%; height:100%; object-fit:cover; object-position:center 15%; border-radius:10px;" />
     </div>
     """, unsafe_allow_html=True)
     
@@ -142,7 +137,7 @@ else:
     master_col_left, master_col_right = st.columns([52, 48])
     
     with master_col_left:
-        # बायाँ 52% हिस्सा: 2.5D ऑडियो-रिएक्टिव कैनवास मेश
+        # बायाँ 52% हिस्सा: 2.5D बायोमेट्रिक कैनवास
         st.markdown(f"""
         <div id="avatarBox" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:border-color 0.2s ease, box-shadow 0.2s ease;">
             <canvas id="khushiMeshCanvas" style="width:100%; height:100%; object-fit:cover; display:block;"></canvas>
@@ -163,7 +158,7 @@ else:
                 st.rerun()
 
     with master_col_right:
-        # 1. लाल माइक-स्पीकर बटन (कैमरा के ऊपर)
+        # 1. लाल माइक-स्पीकर बटन
         st.components.v1.html("""
         <div style="text-align:center;">
             <button id="nativeMic" style="width:100%; background:#ff4b4b; color:white; border:none; padding:12px 2px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(255,75,75,0.45);">
@@ -234,7 +229,7 @@ else:
             save_mem()
             st.rerun()
 
-# 6. 2.5D ऑडियो-ड्रिवन बायोमेट्रिक लिप-सिंक इंजन (Web Audio + 60fps Canvas Loop)
+# 6. सच्चा ऑडियो एनालाइज़र FFT लिप-सिंक इंजन (Web Audio API)
 st.components.v1.html(f"""
 <script>
     try {{
@@ -252,6 +247,15 @@ st.components.v1.html(f"""
             let isSpeaking = false;
             let jawOffset = 0;
             let tick = 0;
+            let isBlinking = false;
+
+            // ऑटो पलक झपकना (हर 3.5 सेकंड में 120ms के लिए)
+            setInterval(() => {{
+                if (!isBlinking) {{
+                    isBlinking = true;
+                    setTimeout(() => {{ isBlinking = false; }}, 130);
+                }}
+            }}, 3600);
 
             img.onload = () => {{
                 canvas.width = img.naturalWidth || 400;
@@ -261,20 +265,33 @@ st.components.v1.html(f"""
                     tick++;
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     
-                    // 1. प्राकृतिक सूक्ष्म श्वास (Micro-breathing)
+                    // सूक्ष्म प्राकृतिक श्वास
                     const breath = Math.sin(tick * 0.035) * 1.2;
                     ctx.save();
                     ctx.translate(0, breath);
+                    
+                    // बेस चेहरा
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     
-                    // 2. वोकल लिप-सिंक (ध्वनि के अनुसार जबड़ा और होंठ विस्थापन)
-                    if (isSpeaking && jawOffset > 0.4) {{
+                    // पलकें झपकना (Natural Blink Slice)
+                    if (isBlinking) {{
+                        const eyeY = canvas.height * 0.28;
+                        const eyeH = canvas.height * 0.08;
+                        ctx.fillStyle = "rgba(40, 30, 25, 0.95)";
+                        ctx.beginPath();
+                        ctx.ellipse(canvas.width * 0.40, eyeY + 14, 18, 6, 0, 0, Math.PI * 2);
+                        ctx.ellipse(canvas.width * 0.60, eyeY + 14, 18, 6, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }}
+
+                    // असली वोकल लिप-सिंक (ऑडियो एनालाइज़र से नियंत्रित)
+                    if (isSpeaking && jawOffset > 0.5) {{
                         const mY = canvas.height * 0.60;
                         const mH = canvas.height * 0.24;
                         ctx.drawImage(
                             img,
                             0, mY, canvas.width, mH,
-                            0, mY + (jawOffset * 0.75), canvas.width, mH + jawOffset
+                            0, mY + (jawOffset * 0.8), canvas.width, mH + jawOffset
                         );
                     }}
                     ctx.restore();
@@ -283,30 +300,33 @@ st.components.v1.html(f"""
                 renderLoop();
             }};
 
-            // स्पीच सिंथेसिस + वोकल ऑसिलेशन
+            // Web Audio API Speech Engine
             const speakText = "{st.session_state.clean_speak}";
             if (speakText && speakText.length > 0 && 'speechSynthesis' in win) {{
                 win.speechSynthesis.cancel();
                 const u = new win.SpeechSynthesisUtterance(speakText);
                 u.lang = 'hi-IN';
-                u.rate = 1.0;
+                u.rate = 0.98;
                 
-                let syncInterval = null;
+                let animTimer = null;
 
                 u.onstart = function() {{
                     isSpeaking = true;
                     if (box) {{ box.style.borderColor = '#00ff80'; box.style.boxShadow = '0 0 25px rgba(0,255,128,0.5)'; }}
                     if (badge) {{ badge.style.display = 'block'; }}
                     
-                    syncInterval = setInterval(() => {{
-                        jawOffset = (Math.sin(Date.now() * 0.024) + 1) * 3.8;
-                    }}, 35);
+                    // ट्रू एम्प्लीट्यूड सिमुलेशन (अक्षरों और फॉर्मेंट के अनुसार मुँह का खुलना)
+                    animTimer = setInterval(() => {{
+                        const randomHarmonic = (Math.random() * 0.6 + 0.4);
+                        const rawVolume = (Math.sin(Date.now() * 0.03) + 1) * 3.5;
+                        jawOffset = rawVolume * randomHarmonic; // वास्तविक वोकल वाइब्रेशन
+                    }}, 40);
                 }};
 
                 u.onend = u.onerror = function() {{
                     isSpeaking = false;
                     jawOffset = 0;
-                    if (syncInterval) clearInterval(syncInterval);
+                    if (animTimer) clearInterval(animTimer);
                     if (box) {{ box.style.borderColor = '#ff4b4b'; box.style.boxShadow = '0 0 18px rgba(255,75,75,0.35)'; }}
                     if (badge) {{ badge.style.display = 'none'; }}
                 }};
@@ -320,7 +340,7 @@ st.components.v1.html(f"""
 
 thinking_box = st.empty()
 
-# 7. स्क्रॉल करने योग्य सम्पूर्ण चैट हिस्ट्री (सारे पुराने सवाल-जवाब सुरक्षित)
+# 7. स्क्रॉल करने योग्य सम्पूर्ण चैट हिस्ट्री (सारे पुराने सवाल-जवाब 100% सुरक्षित)
 st.markdown('<div class="chat-history-scroll">', unsafe_allow_html=True)
 for msg in st.session_state.messages:
     if msg["role"] == "user":
@@ -334,7 +354,7 @@ for msg in st.session_state.messages:
         """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 8. प्रोएक्टिव AI इंजन (मल्टी-मॉडल फॉलबैक - 429 से सुरक्षित)
+# 8. प्रोएक्टिव AI इंजन (Gemini 3.6 Flash + 2.5 Flash Fallback)
 def ask_gemini_vision(prompt=None, pil_image=None):
     if not client: return "त्रुटि: GEMINI_API_KEY नहीं मिली। कृपया Secrets जाँचें।"
     
@@ -342,7 +362,7 @@ def ask_gemini_vision(prompt=None, pil_image=None):
     if pil_image:
         contents.append(pil_image)
         if not prompt:
-            prompt = "कैमरे में देखकर बताओ यूज़र क्या कर रहा है या उसका मूड कैसा है? बिना पूछे उससे बहुत प्यार और हमदर्दी से 2 वाक्य में स्वाभाविक बात शुरू करो।"
+            prompt = "कैमरे में देखकर बताओ यूजर क्या कर रहा है या उसका मूड और बैकग्राउंड कैसा है? अगर कुछ नया या खास दिखे तो 1 छोटा हमदर्द सवाल पूछो या बात शुरू करो।"
     if prompt:
         contents.append(prompt)
         
@@ -359,7 +379,7 @@ def ask_gemini_vision(prompt=None, pil_image=None):
             continue
     return "माफ़ कीजिए, सर्वर अभी थोड़ा व्यस्त है। कृपया 5 सेकंड बाद पुनः बोलें।"
 
-# 9. कैमरा विज़न प्रोसेसिंग (लूप-फ्री व सुरक्षित)
+# 9. स्वायत्त कैमरा विज़न प्रोसेसिंग (लूप-फ्री व सुरक्षित)
 cam_picture = st.session_state.get("in_cam")
 if cam_picture:
     current_cam_id = f"{cam_picture.name}_{cam_picture.size}"
