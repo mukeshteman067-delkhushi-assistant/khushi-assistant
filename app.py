@@ -5,14 +5,15 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-# 1. पेज कॉन्फ़िगरेशन (स्क्रीन 100% फ्रोज़न)
+# 1. पेज कॉन्फ़िगरेशन (डिज़ाइन 100% फ्रोज़न)
 st.set_page_config(page_title="Khushi AI", page_icon="🌸", layout="wide")
 
 st.markdown("""
 <style>
-    .block-container { padding: 0.2rem 0.3rem 4rem 0.3rem !important; max-width: 100% !important; }
+    .block-container { padding: 0.2rem 0.4rem 4rem 0.4rem !important; max-width: 100% !important; }
     header, footer, #MainMenu { visibility: hidden !important; }
     
+    /* 52% - 48% सख्त ग्रिड लॉक */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
@@ -39,6 +40,24 @@ st.markdown("""
         font-size: 11px !important;
     }
     
+    /* स्क्रॉल करने योग्य चैट हिस्ट्री कंटेनर */
+    .chat-history-scroll {
+        max-height: 380px !important;
+        overflow-y: auto !important;
+        padding-right: 4px !important;
+        margin-top: 10px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    .chat-history-scroll::-webkit-scrollbar {
+        width: 4px !important;
+    }
+    .chat-history-scroll::-webkit-scrollbar-thumb {
+        background: #3b4261 !important;
+        border-radius: 4px !important;
+    }
+    
     .thinking-badge {
         background: linear-gradient(90deg, rgba(0,255,128,0.2), rgba(56,189,248,0.2));
         border: 1px solid #00ff80;
@@ -58,7 +77,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. खुशी MP4 वीडियो अथवा फ़ोटो लोडर
+# 2. वीडियो / फ़ोटो लोडर
 def get_khushi_assets():
     has_vid = os.path.exists("khushi.mp4")
     v_b64, img_b64 = "", ""
@@ -77,17 +96,17 @@ def get_khushi_assets():
 has_vid, khushi_video, khushi_img = get_khushi_assets()
 media_src = khushi_video if has_vid else khushi_img
 
-# 3. Gemini 3.6 Flash Client
+# 3. Gemini Client Setup
 raw_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
-PERSONA = f"""तुम 'Khushi' हो - सामने बैठे इंसान को महसूस करने वाली, विनम्र, बुद्धिमान, कोडिंग व साइंस एक्सपर्ट सच्ची AI दोस्त।
+PERSONA = f"""तुम 'Khushi' हो - सामने बैठे इंसान को महसूस करने वाली, विनम्र, बुद्धिमान, कोडिंग, साइंस व डेटा एक्सपर्ट सच्ची AI दोस्त।
 समय (IST): {ist_now}। 
 जब भी तुम्हें कैमरा विज़न से यूज़र दिखे, तो उसके हाव-भाव या माहौल को समझकर 2 पंक्तियों में स्वाभाविक, सजीव और बहुत हमदर्दी से हिंदी में बोलो।"""
 
-# 4. मेमोरी
+# 4. मेमोरी सिस्टम (स्थायी JSON)
 if "messages" not in st.session_state:
     if os.path.exists("khushi_memory.json"):
         try:
@@ -112,7 +131,7 @@ if st.session_state.is_zoom:
     st.markdown(f"""
     <div style="width:100%; height:62vh; max-height:480px; background:#070913; border-radius:12px; border:2px solid #00ff80; display:flex; align-items:center; justify-content:center; padding:4px; box-sizing:border-box; margin-bottom:6px; box-shadow:0 0 20px rgba(0,255,128,0.35);">
         <div style="width:100%; height:100%; border-radius:10px; overflow:hidden;">
-            {'<video id="kZoomVid" src="' + media_src + '" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 15%;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />'}
+            {'<video id="kZoomVid" src="' + media_src + '" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 15%;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />'}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -131,9 +150,10 @@ else:
     master_col_left, master_col_right = st.columns([52, 48])
     
     with master_col_left:
+        # बायाँ 52% हिस्सा: ऑडियो-सिंक वीडियो प्लेयर
         st.markdown(f"""
         <div id="videoFrameBox" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:border-color 0.2s ease, box-shadow 0.2s ease;">
-            {'<video id="kMainVid" src="' + media_src + '" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 12%;" />'}
+            {'<video id="kMainVid" src="' + media_src + '" loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 12%;" />'}
         </div>
         """, unsafe_allow_html=True)
         
@@ -195,7 +215,7 @@ else:
             st.session_state.cam_on = not st.session_state.cam_on
             st.rerun()
             
-        # 3. इन-प्लेस कैमरा बॉक्स
+        # 3. बीच का इन-प्लेस कैमरा बॉक्स (88px)
         if st.session_state.cam_on:
             st.camera_input("लाइव कैमरा", label_visibility="collapsed", key="in_cam")
         else:
@@ -219,28 +239,38 @@ else:
             save_mem()
             st.rerun()
 
-# 6. ऑटो-स्पीकर इंजन (सीधे इनबिल्ट - नो कैश एरर)
+# 6. रीयल-टाइम वीडियो-ऑडियो सिंक इंजन (आवाज़ शुरू -> वीडियो प्ले, आवाज़ खत्म -> वीडियो पॉज़)
 if st.session_state.clean_speak:
     st.components.v1.html(f"""
     <script>
         try {{
             const win = window.parent || window;
+            const doc = win.document;
             if ('speechSynthesis' in win) {{
                 win.speechSynthesis.cancel();
                 const u = new win.SpeechSynthesisUtterance("{st.session_state.clean_speak}");
                 u.lang = 'hi-IN';
                 u.rate = 1.0;
                 
+                const vid1 = doc.getElementById('kMainVid');
+                const vid2 = doc.getElementById('kZoomVid');
+                const box = doc.getElementById('videoFrameBox');
+                
+                // जैसे ही आवाज़ शुरू होगी, वीडियो एक्टिव होकर लिप-सिंक करेगा
                 u.onstart = function() {{
-                    const f = win.document.getElementById('videoFrameBox');
-                    if (f) {{ f.style.borderColor = '#00ff80'; f.style.boxShadow = '0 0 25px rgba(0,255,128,0.5)'; }}
-                }};
-                u.onend = u.onerror = function() {{
-                    const f = win.document.getElementById('videoFrameBox');
-                    if (f) {{ f.style.borderColor = '#ff4b4b'; f.style.boxShadow = '0 0 18px rgba(255,75,75,0.35)'; }}
+                    if (vid1) {{ vid1.currentTime = 0; vid1.play().catch(e=>{{}}); }}
+                    if (vid2) {{ vid2.currentTime = 0; vid2.play().catch(e=>{{}}); }}
+                    if (box) {{ box.style.borderColor = '#00ff80'; box.style.boxShadow = '0 0 25px rgba(0,255,128,0.5)'; }}
                 }};
                 
-                setTimeout(() => win.speechSynthesis.speak(u), 100);
+                // जैसे ही आवाज़ खत्म होगी, वीडियो पॉज़ होकर शांत हो जाएगा
+                u.onend = u.onerror = function() {{
+                    if (vid1) {{ vid1.pause(); }}
+                    if (vid2) {{ vid2.pause(); }}
+                    if (box) {{ box.style.borderColor = '#ff4b4b'; box.style.boxShadow = '0 0 18px rgba(255,75,75,0.35)'; }}
+                }};
+                
+                setTimeout(() => win.speechSynthesis.speak(u), 150);
             }}
         }} catch(e) {{}}
     </script>
@@ -248,9 +278,9 @@ if st.session_state.clean_speak:
 
 thinking_box = st.empty()
 
-# 7. चैट आंसर कार्ड
-st.markdown('<div id="chatAnswerContainer">', unsafe_allow_html=True)
-for msg in st.session_state.messages[-2:]:
+# 7. स्क्रॉल करने योग्य सम्पूर्ण चैट हिस्ट्री (सारे पिछले सवाल व जवाब सुरक्षित)
+st.markdown('<div class="chat-history-scroll">', unsafe_allow_html=True)
+for msg in st.session_state.messages:
     if msg["role"] == "user":
         st.markdown(f"🗣️ **आप (Q):** {msg['content']}")
     else:
@@ -262,9 +292,9 @@ for msg in st.session_state.messages[-2:]:
         """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 8. AI इंजन (Gemini 3.6 Flash + विज़न)
+# 8. प्रोएक्टिव AI इंजन (मल्टी-मॉडल ऑटोमैटिक फॉलबैक - 429 से सुरक्षित)
 def ask_gemini_vision(prompt=None, pil_image=None):
-    if not client: return "त्रुटि: GEMINI_API_KEY नहीं मिली।"
+    if not client: return "त्रुटि: GEMINI_API_KEY नहीं मिली। कृपया Secrets जाँचें।"
     
     contents = []
     if pil_image:
@@ -274,7 +304,8 @@ def ask_gemini_vision(prompt=None, pil_image=None):
     if prompt:
         contents.append(prompt)
         
-    for m in ['gemini-3.6-flash', 'gemini-2.5-flash']:
+    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash']
+    for m in models_to_try:
         try:
             res = client.models.generate_content(
                 model=m,
@@ -284,9 +315,9 @@ def ask_gemini_vision(prompt=None, pil_image=None):
             if res and res.text: return res.text
         except Exception:
             continue
-    return "माफ़ कीजिए, सर्वर व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।"
+    return "माफ़ कीजिए, सर्वर अभी थोड़ा व्यस्त है। कृपया 5 सेकंड बाद पुनः बोलें।"
 
-# 9. कैमरा विज़न प्रोसेसिंग (लूप-फ्री)
+# 9. कैमरा विज़न प्रोसेसिंग (एक बार प्रोसेस, नो लूप)
 cam_picture = st.session_state.get("in_cam")
 if cam_picture:
     current_cam_id = f"{cam_picture.name}_{cam_picture.size}"
@@ -315,4 +346,3 @@ if user_query:
     st.session_state.clean_speak = re.sub(r'[*#~`_+=|\\<>]', ' ', ans).replace('"', ' ').replace("'", " ").strip()
     thinking_box.empty()
     st.rerun()
-    
