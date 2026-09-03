@@ -3,18 +3,35 @@ import streamlit as st
 def apply_custom_css():
     st.markdown("""
     <style>
-        .block-container { padding: 0.2rem 0.4rem 4rem 0.4rem !important; max-width: 100% !important; }
+        .block-container { padding: 0.2rem 0.3rem 4rem 0.3rem !important; max-width: 100% !important; }
         header, footer, #MainMenu { visibility: hidden !important; }
-        div[data-testid="column"] { padding: 2px !important; }
+        
+        div[data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 6px !important;
+            width: 100% !important;
+        }
+        div[data-testid="stHorizontalBlock"] > div:nth-child(1) {
+            width: 52% !important;
+            min-width: 52% !important;
+            flex: 0 0 52% !important;
+        }
+        div[data-testid="stHorizontalBlock"] > div:nth-child(2) {
+            width: 48% !important;
+            min-width: 48% !important;
+            flex: 0 0 48% !important;
+        }
+        
         div.stButton > button {
             width: 100% !important;
-            border-radius: 10px !important;
+            border-radius: 8px !important;
             font-weight: bold !important;
-            padding: 8px 2px !important;
-            font-size: 12px !important;
-            border: 1px solid transparent !important;
-            transition: all 0.2s ease !important;
+            padding: 7px 2px !important;
+            font-size: 11px !important;
         }
+        
         .thinking-badge {
             background: linear-gradient(90deg, rgba(0,255,128,0.2), rgba(56,189,248,0.2));
             border: 1px solid #00ff80;
@@ -34,64 +51,14 @@ def apply_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
-def render_zoom_mode(img_b64, clean_speak):
-    # 1:1 स्क्वायर ज़ूम में 2.5D मेश
-    mesh_zoom_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"/><style>* {{ margin:0; padding:0; box-sizing:border-box; }}</style></head>
-    <body style="background:transparent; overflow:hidden; display:flex; justify-content:center; align-items:center;">
-        <canvas id="zoomCanvas" style="width:100%; height:100%; object-fit:cover; border-radius:10px;"></canvas>
-        <script>
-            const canvas = document.getElementById('zoomCanvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.src = "{img_b64}";
-            let isSpeaking = false;
-            let jawOffset = 0;
-            
-            img.onload = () => {{
-                canvas.width = img.naturalWidth || 400;
-                canvas.height = img.naturalHeight || 500;
-                function loop() {{
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    if (isSpeaking && jawOffset > 0.5) {{
-                        const mY = canvas.height * 0.60;
-                        const mH = canvas.height * 0.25;
-                        ctx.drawImage(img, 0, mY, canvas.width, mH, 0, mY + (jawOffset * 0.8), canvas.width, mH + jawOffset);
-                    }}
-                    requestAnimationFrame(loop);
-                }}
-                loop();
-            }};
-            
-            const txt = "{clean_speak}";
-            if (txt && 'speechSynthesis' in window) {{
-                window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(txt);
-                u.lang = 'hi-IN';
-                let mouthInt = null;
-                u.onstart = () => {{
-                    isSpeaking = true;
-                    mouthInt = setInterval(() => {{ jawOffset = (Math.sin(Date.now() * 0.02) + 1) * 3.5; }}, 40);
-                }};
-                u.onend = u.onerror = () => {{
-                    isSpeaking = false;
-                    jawOffset = 0;
-                    if (mouthInt) clearInterval(mouthInt);
-                }};
-                setTimeout(() => window.speechSynthesis.speak(u), 100);
-            }}
-        </script>
-    </body>
-    </html>
-    """
-    st.markdown("""
-    <div style="width:100%; height:62vh; max-height:480px; background:#070913; border-radius:12px; border:2px solid #00ff80; display:flex; align-items:center; justify-content:center; padding:4px; box-sizing:border-box; margin-bottom:6px; box-shadow:0 0 18px rgba(0,255,128,0.35);">
+def render_zoom_mode(media_src, has_vid):
+    st.markdown(f"""
+    <div style="width:100%; height:62vh; max-height:480px; background:#070913; border-radius:12px; border:2px solid #00ff80; display:flex; align-items:center; justify-content:center; padding:4px; box-sizing:border-box; margin-bottom:6px; box-shadow:0 0 20px rgba(0,255,128,0.35);">
+        <div style="width:100%; height:100%; border-radius:10px; overflow:hidden;">
+            {'<video id="kZoomVid" src="' + media_src + '" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 15%;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 15%;" />'}
+        </div>
+    </div>
     """, unsafe_allow_html=True)
-    st.components.v1.html(mesh_zoom_html, height=460)
-    st.markdown("</div>", unsafe_allow_html=True)
     
     col_z1, col_z2 = st.columns(2)
     with col_z1:
@@ -103,77 +70,18 @@ def render_zoom_mode(img_b64, clean_speak):
             st.session_state.clean_speak = ""
             st.rerun()
 
-def render_standard_mode(img_b64, clean_speak, save_mem_callback):
+def render_standard_mode(media_src, has_vid, save_mem_callback):
     master_col_left, master_col_right = st.columns([52, 48])
     
     with master_col_left:
-        # बायाँ 52% हिस्सा: 2.5D मेश कैनवास + लिप-सिंक (सेल्फ-कंटेंड, 0% एरर)
-        mesh_avatar_html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><meta charset="utf-8"/><style>* {{ margin:0; padding:0; box-sizing:border-box; }}</style></head>
-        <body style="background:transparent; overflow:hidden;">
-            <div id="box" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:border-color 0.2s ease, box-shadow 0.2s ease;">
-                <canvas id="kCanvas" style="width:100%; height:100%; object-fit:cover; display:block;"></canvas>
-            </div>
-            <script>
-                const canvas = document.getElementById('kCanvas');
-                const box = document.getElementById('box');
-                const ctx = canvas.getContext('2d');
-                const img = new Image();
-                img.src = "{img_b64}";
-                let isSpeaking = false;
-                let jawOffset = 0;
-                
-                img.onload = () => {{
-                    canvas.width = img.naturalWidth || 400;
-                    canvas.height = img.naturalHeight || 500;
-                    function loop() {{
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        // वोकल लिप सिंक (जबड़ा और निचला होंठ हिलना)
-                        if (isSpeaking && jawOffset > 0.5) {{
-                            const mY = canvas.height * 0.60;
-                            const mH = canvas.height * 0.25;
-                            ctx.drawImage(img, 0, mY, canvas.width, mH, 0, mY + (jawOffset * 0.8), canvas.width, mH + jawOffset);
-                        }}
-                        requestAnimationFrame(loop);
-                    }}
-                    loop();
-                }};
-                
-                const txt = "{clean_speak}";
-                if (txt && 'speechSynthesis' in window) {{
-                    window.speechSynthesis.cancel();
-                    const u = new SpeechSynthesisUtterance(txt);
-                    u.lang = 'hi-IN';
-                    u.rate = 1.0;
-                    let mouthInt = null;
-                    
-                    u.onstart = () => {{
-                        isSpeaking = true;
-                        box.style.borderColor = '#00ff80';
-                        box.style.boxShadow = '0 0 25px rgba(0,255,128,0.5)';
-                        mouthInt = setInterval(() => {{ jawOffset = (Math.sin(Date.now() * 0.02) + 1) * 3.5; }}, 40);
-                    }};
-                    
-                    u.onend = u.onerror = () => {{
-                        isSpeaking = false;
-                        jawOffset = 0;
-                        if (mouthInt) clearInterval(mouthInt);
-                        box.style.borderColor = '#ff4b4b';
-                        box.style.boxShadow = '0 0 18px rgba(255,75,75,0.35)';
-                    }};
-                    
-                    setTimeout(() => window.speechSynthesis.speak(u), 100);
-                }}
-            </script>
-        </body>
-        </html>
-        """
-        st.components.v1.html(mesh_avatar_html, height=315)
+        # बायाँ 52% हिस्सा: असली MP4 वीडियो फ़्रेम
+        st.markdown(f"""
+        <div id="videoFrameBox" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:border-color 0.2s ease, box-shadow 0.2s ease;">
+            {'<video id="kMainVid" src="' + media_src + '" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 12%;" />'}
+        </div>
+        """, unsafe_allow_html=True)
         
+        # Puss और Zoom दोनों इमेज के नीचे एक साथ पास
         col_bl, col_br = st.columns(2)
         with col_bl:
             if st.button("🛑 Puss", key="btn_puss"):
@@ -185,10 +93,10 @@ def render_standard_mode(img_b64, clean_speak, save_mem_callback):
                 st.rerun()
 
     with master_col_right:
-        # 1. लाल माइक-स्पीकर बटन (कैमरा के ऊपर)
+        # 1. लाल माइक-स्पीकर बटन (शीर्ष पर)
         st.components.v1.html("""
         <div style="text-align:center;">
-            <button id="nativeMic" style="width:100%; background:#ff4b4b; color:white; border:none; padding:12px 2px; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(255,75,75,0.45);">
+            <button id="nativeMic" style="width:100%; background:#ff4b4b; color:white; border:none; padding:12px 2px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(255,75,75,0.45);">
                 🎙️ mike - spiker (बोलें)
             </button>
             <span id="mStatus" style="font-size:10px; color:#9ca3af; display:block; margin-top:3px;">माइक व स्पीकर एक्टिव</span>
@@ -232,21 +140,21 @@ def render_standard_mode(img_b64, clean_speak, save_mem_callback):
             st.session_state.cam_on = not st.session_state.cam_on
             st.rerun()
             
-        # 3. इन-प्लेस कैमरा बॉक्स (विज़न सक्रिय)
+        # 3. बीच का इन-प्लेस कैमरा बॉक्स (88px)
         if st.session_state.cam_on:
             st.camera_input("लाइव कैमरा", label_visibility="collapsed", key="in_cam")
         else:
             st.markdown("""
             <div style="width:100%; height:88px; background:#07080f; border-radius:10px; border:1px dashed #2e3856; display:flex; align-items:center; justify-content:center;">
-                <span style="color:#555f7d; font-size:11px;">कैमरा स्टैंडबाय (OFF)</span>
+                <span style="color:#555f7d; font-size:10.5px;">कैमरा स्टैंडबाय (OFF)</span>
             </div>
             """, unsafe_allow_html=True)
         
-        # 4. इनलाइन सेटिंग्स व मेमोरी साफ़
+        # 4. इनलाइन कॉम्पैक्ट सेटिंग्स व मेमोरी साफ़
         st.markdown("""
         <div style="width:100%; background:#131526; border:1px solid #7c3aed; border-radius:10px; padding:4px; margin-top:2px;">
             <div style="display:flex; justify-content:space-between; align-items:center; padding:0 2px;">
-                <span style="color:#c084fc; font-size:10.5px; font-weight:bold;">⚙️ सेटिंग</span>
+                <span style="color:#c084fc; font-size:10px; font-weight:bold;">⚙️ सेटिंग</span>
                 <span style="color:#10b981; font-size:9px;">● 3.6 Flash Vision</span>
             </div>
         </div>
@@ -254,5 +162,32 @@ def render_standard_mode(img_b64, clean_speak, save_mem_callback):
         if st.button("🗑️ मेमोरी साफ़ करें", key="btn_clear_mem"):
             st.session_state.messages = []
             save_mem_callback()
-            st.success("मेमोरी रीसेट हो गई!")
             st.rerun()
+
+def play_audio_engine(clean_speak):
+    if clean_speak:
+        st.components.v1.html(f"""
+        <script>
+            try {{
+                const win = window.parent || window;
+                if ('speechSynthesis' in win) {{
+                    win.speechSynthesis.cancel();
+                    const u = new win.SpeechSynthesisUtterance("{clean_speak}");
+                    u.lang = 'hi-IN';
+                    u.rate = 1.0;
+                    
+                    u.onstart = function() {{
+                        const f = win.document.getElementById('videoFrameBox');
+                        if (f) {{ f.style.borderColor = '#00ff80'; f.style.boxShadow = '0 0 25px rgba(0,255,128,0.5)'; }}
+                    }};
+                    u.onend = u.onerror = function() {{
+                        const f = win.document.getElementById('videoFrameBox');
+                        if (f) {{ f.style.borderColor = '#ff4b4b'; f.style.boxShadow = '0 0 18px rgba(255,75,75,0.35)'; }}
+                    }};
+                    
+                    setTimeout(() => win.speechSynthesis.speak(u), 100);
+                }}
+            }} catch(e) {{}}
+        </script>
+        """, height=0)
+        
