@@ -74,14 +74,12 @@ def render_standard_mode(media_src, has_vid, save_mem_callback):
     master_col_left, master_col_right = st.columns([52, 48])
     
     with master_col_left:
-        # बायाँ 52% हिस्सा: असली MP4 वीडियो फ़्रेम
         st.markdown(f"""
-        <div id="videoFrameBox" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35); transition:border-color 0.2s ease, box-shadow 0.2s ease;">
+        <div id="videoFrameBox" style="width:100%; height:310px; background:#000; border:2px solid #ff4b4b; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 0 18px rgba(255,75,75,0.35);">
             {'<video id="kMainVid" src="' + media_src + '" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; object-position:center 12%;"></video>' if has_vid else '<img src="' + media_src + '" style="width:100%; height:100%; object-fit:cover; object-position:center 12%;" />'}
         </div>
         """, unsafe_allow_html=True)
         
-        # Puss और Zoom दोनों इमेज के नीचे एक साथ पास
         col_bl, col_br = st.columns(2)
         with col_bl:
             if st.button("🛑 Puss", key="btn_puss"):
@@ -93,7 +91,7 @@ def render_standard_mode(media_src, has_vid, save_mem_callback):
                 st.rerun()
 
     with master_col_right:
-        # 1. लाल माइक-स्पीकर बटन (शीर्ष पर)
+        # लाल माइक-स्पीकर बटन (शीर्ष पर)
         st.components.v1.html("""
         <div style="text-align:center;">
             <button id="nativeMic" style="width:100%; background:#ff4b4b; color:white; border:none; padding:12px 2px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(255,75,75,0.45);">
@@ -134,13 +132,11 @@ def render_standard_mode(media_src, has_vid, save_mem_callback):
         </script>
         """, height=65)
 
-        # 2. कैमरा ऑन-ऑफ बटन
         cam_text = "📷 कैमरा on — off" if not st.session_state.cam_on else "📷 कैमरा (LIVE ON)"
         if st.button(cam_text, key="btn_cam_toggle"):
             st.session_state.cam_on = not st.session_state.cam_on
             st.rerun()
             
-        # 3. बीच का इन-प्लेस कैमरा बॉक्स (88px)
         if st.session_state.cam_on:
             st.camera_input("लाइव कैमरा", label_visibility="collapsed", key="in_cam")
         else:
@@ -150,7 +146,6 @@ def render_standard_mode(media_src, has_vid, save_mem_callback):
             </div>
             """, unsafe_allow_html=True)
         
-        # 4. इनलाइन कॉम्पैक्ट सेटिंग्स व मेमोरी साफ़
         st.markdown("""
         <div style="width:100%; background:#131526; border:1px solid #7c3aed; border-radius:10px; padding:4px; margin-top:2px;">
             <div style="display:flex; justify-content:space-between; align-items:center; padding:0 2px;">
@@ -164,6 +159,7 @@ def render_standard_mode(media_src, has_vid, save_mem_callback):
             save_mem_callback()
             st.rerun()
 
+# लाइन 68 वाला आवश्यक फंक्शन:
 def play_audio_engine(clean_speak):
     if clean_speak:
         st.components.v1.html(f"""
@@ -190,4 +186,3 @@ def play_audio_engine(clean_speak):
             }} catch(e) {{}}
         </script>
         """, height=0)
-        
