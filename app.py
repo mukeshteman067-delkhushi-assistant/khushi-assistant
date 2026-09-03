@@ -10,19 +10,26 @@ import ui_layout
 st.set_page_config(page_title="Khushi AI", page_icon="🌸", layout="wide")
 ui_layout.apply_custom_css()
 
-# खुशी की इमेज लोड करना
+# खुशी MP4 वीडियो या फ़ोटो लोडर
 def get_khushi_assets():
-    img_b64 = ""
+    has_vid = os.path.exists("khushi.mp4")
+    v_b64, img_b64 = "", ""
+    if has_vid:
+        try:
+            with open("khushi.mp4", "rb") as f:
+                v_b64 = f"data:video/mp4;base64,{base64.b64encode(f.read()).decode()}"
+        except Exception: pass
     if os.path.exists("khushi.jpg"):
         try:
             with open("khushi.jpg", "rb") as f:
                 img_b64 = f"data:image/jpeg;base64,{base64.b64encode(f.read()).decode()}"
         except Exception: pass
-    return img_b64
+    return has_vid, v_b64, img_b64
 
-khushi_img = get_khushi_assets()
+has_vid, khushi_video, khushi_img = get_khushi_assets()
+media_src = khushi_video if has_vid else khushi_img
 
-# Gemini Client Setup
+# Gemini 3.6 Flash Client
 raw_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
@@ -32,7 +39,7 @@ PERSONA = f"""तुम 'Khushi' हो - सामने बैठे इंस
 समय (IST): {ist_now}। 
 जब भी तुम्हें कैमरा विज़न से यूज़र दिखे, तो उसके हाव-भाव या माहौल को समझकर 2 पंक्तियों में स्वाभाविक, सजीव और बहुत हमदर्दी से हिंदी में बोलो।"""
 
-# मेमोरी लोड
+# मेमोरी
 if "messages" not in st.session_state:
     if os.path.exists("khushi_memory.json"):
         try:
@@ -47,21 +54,22 @@ def save_mem():
             json.dump(st.session_state.messages, f, ensure_ascii=False)
     except Exception: pass
 
-# स्टेट्स
 if "cam_on" not in st.session_state: st.session_state.cam_on = False
 if "is_zoom" not in st.session_state: st.session_state.is_zoom = False
 if "clean_speak" not in st.session_state: st.session_state.clean_speak = ""
 if "last_cam_id" not in st.session_state: st.session_state.last_cam_id = None
 
-# लेआउट रेंडरिंग (Zoom या Standard)
+# लेआउट रेंडर (Zoom या Standard)
 if st.session_state.is_zoom:
-    ui_layout.render_zoom_mode(khushi_img, st.session_state.clean_speak)
+    ui_layout.render_zoom_mode(media_src, has_vid)
 else:
-    ui_layout.render_standard_mode(khushi_img, st.session_state.clean_speak, save_mem)
+    ui_layout.render_standard_mode(media_src, has_vid, save_mem)
+
+ui_layout.play_audio_engine(st.session_state.clean_speak)
 
 thinking_box = st.empty()
 
-# चैट संवाद कार्ड
+# चैट आंसर कार्ड
 st.markdown('<div id="chatAnswerContainer">', unsafe_allow_html=True)
 for msg in st.session_state.messages[-2:]:
     if msg["role"] == "user":
@@ -75,7 +83,7 @@ for msg in st.session_state.messages[-2:]:
         """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# AI इंजन (प्राथमिक Gemini 3.6 Flash, अथवा 2.5 Flash फॉलबैक)
+# AI इंजन (Gemini 3.6 Flash + विज़न)
 def ask_gemini_vision(prompt=None, pil_image=None):
     if not client: return "त्रुटि: GEMINI_API_KEY नहीं मिली। कृपया Secrets जाँचें।"
     
@@ -97,9 +105,9 @@ def ask_gemini_vision(prompt=None, pil_image=None):
             if res and res.text: return res.text
         except Exception:
             continue
-    return "माफ़ कीजिए, सर्वर अधिक व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।"
+    return "माफ़ कीजिए, सर्वर व्यस्त है। कृपया 5 सेकंड बाद पुनः प्रयास करें।"
 
-# 100% सुरक्षित कैमरा विज़न प्रोसेसिंग (अनंत लूप से पूरी तरह सुरक्षित)
+# सुरक्षित कैमरा विज़न प्रोसेसिंग (एक बार प्रोसेस, नो लूप)
 cam_picture = st.session_state.get("in_cam")
 if cam_picture:
     current_cam_id = f"{cam_picture.name}_{cam_picture.size}"
@@ -116,7 +124,7 @@ if cam_picture:
         thinking_box.empty()
         st.rerun()
 
-# चैट टेक्स्ट इनपुट
+# चैट इनपुट
 user_query = st.chat_input("यहाँ लिखें या ऊपर mike बटन दबाकर बोलें...")
 if user_query:
     st.session_state.messages.append({"role": "user", "content": user_query})
@@ -128,4 +136,4 @@ if user_query:
     st.session_state.clean_speak = re.sub(r'[*#~`_+=|\\<>]', ' ', ans).replace('"', ' ').replace("'", " ").strip()
     thinking_box.empty()
     st.rerun()
-                
+    
