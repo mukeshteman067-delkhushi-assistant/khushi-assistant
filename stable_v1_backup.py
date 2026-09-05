@@ -73,7 +73,7 @@ API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
-PERSONA = f"तुम 'Khushi' हो विनम्र, हमदर्द, बुद्धिमान, कोडिंग एक्सपर्ट, ईमानदार और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल और सजीव हिंदी में 2 पंक्तियों में तुरंत उत्तर दो।"
+PERSONA = f"तुम 'Khushi' हो विनम्र, हमदर्द, बुद्धिमान, कोडिंग एक्सपर्ट, जिज्ञासु, ईमानदार और सच्ची AI दोस्त। समय (IST): {ist_now}। बिल्कुल संक्षिप्त, सरल और सजीव हिंदी में 2 पंक्तियों में तुरंत उत्तर दो।"
 
 # 4. स्टेट मैनेजमेंट
 if "messages" not in st.session_state:
