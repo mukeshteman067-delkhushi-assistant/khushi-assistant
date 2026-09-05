@@ -85,7 +85,7 @@ def get_khushi_image():
 
 khushi_b64 = get_khushi_image()
 
-# 3. Gemini 3.6 Flash Client
+# 3. Gemini 1.5 Flash Client
 raw_key = st.secrets.get("GEMINI_API_KEY", "")
 API_KEY = "".join(raw_key.split()) if raw_key else ""
 client = genai.Client(api_key=API_KEY) if API_KEY else None
@@ -354,7 +354,7 @@ for msg in st.session_state.messages:
         """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 8. प्रोएक्टिव AI इंजन (Gemini 3.6 Flash + 2.5 Flash Fallback)
+# 8. प्रोएक्टिव AI इंजन (Gemini 3.6 Flash + 2.5 Flash +1.5 Flash Fallback)
 def ask_gemini_vision(prompt=None, pil_image=None):
     if not client: return "त्रुटि: GEMINI_API_KEY नहीं मिली। कृपया Secrets जाँचें।"
     
@@ -366,7 +366,7 @@ def ask_gemini_vision(prompt=None, pil_image=None):
     if prompt:
         contents.append(prompt)
         
-    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash']
+    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', gemini-1.5-Flash]
     for m in models_to_try:
         try:
             res = client.models.generate_content(
