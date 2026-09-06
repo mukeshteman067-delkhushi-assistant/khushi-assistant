@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Khushi AI - Supernova Companion</title>
+  
+  <meta name="theme-color" content="#0b0f19" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    * { font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #070a13; color: #f8fafc; overflow: hidden; height: 100vh; }
+    
+    /* 3D अवतार ग्लो इफेक्ट */
+    .avatar-glow {
+      box-shadow: 0 0 50px rgba(56, 189, 248, 0.15), inset 0 0 40px rgba(99, 102, 241, 0.2);
+    }
+    
+    /* पल्सिंग वॉइस बार्स */
+    .audio-bar {
+      transition: height 0.05s ease-in-out;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen select-none">
+
+  <header class="h-14 border-b border-slate-800/80 flex items-center justify-between px-4 bg-slate-900/60 backdrop-blur-md z-30">
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+      <h1 class="font-bold text-lg tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">KHUSHI AI</h1>
+      <span class="text-xs bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-800/60">Supernova 2.0</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="installBtn" class="hidden text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg shadow-lg transition">
+        📲 ऐप इंस्टॉल करें
+      </button>
+      <button onclick="clearChat()" class="text-xs text-slate-400 hover:text-rose-400 transition px-2 py-1">
+        साफ़ करें
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col relative overflow-hidden">
+    
+    <div class="relative flex-1 flex items-center justify-center p-4">
+      <div class="relative w-64 h-64 sm:w-80 sm:h-80 rounded-full avatar-glow border border-sky-500/20 flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950">
+        
+        <canvas id="avatarCanvas" width="320" height="320" class="w-full h-full object-cover"></canvas>
+        
+        <div id="voiceRing" class="absolute inset-0 rounded-full border-2 border-sky-400 opacity-0 transition-opacity duration-300 pointer-events-none"></div>
+      </div>
+
+      <div id="statusBadge" class="absolute bottom-4 bg-slate-900/80 border border-slate-800 text-xs px-3 py-1 rounded-full text-slate-400 backdrop-blur-sm">
+        🟢 सक्रिय और तैयार
+      </div>
+    </div>
+
+    <div class="h-44 sm:h-52 bg-slate-900/90 border-t border-slate-800/80 p-4 flex flex-col justify-between backdrop-blur-xl z-20">
+      
+      <div id="subtitleBox" class="overflow-y-auto text-sm sm:text-base text-slate-200 leading-relaxed max-h-24 pr-1">
+        <p class="text-slate-400 italic">नमस्ते! मैं खुशी हूँ। आप मुझसे विज्ञान, व्यापार, तकनीक या कोई भी सवाल पूछ सकते हैं...</p>
+      </div>
+
+      <div class="flex items-center gap-2 mt-2">
+        <input 
+          id="userInput" 
+          type="text" 
+          placeholder="खुशी से कुछ भी पूछें..." 
+          class="flex-1 bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-xl px-4 py-2.5 text-sm text-white outline-none transition"
+          onkeydown="if(event.key === 'Enter') handleSend()"
+        />
+        <button 
+          id="micBtn" 
+          onclick="toggleListening()"
+          class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+          title="बोलकर पूछें"
+        >
+          🎤
+        </button>
+        <button 
+          id="sendBtn" 
+          onclick="handleSend()" 
+          class="bg-gradient-to-r from-sky-500 to-indigo-500 hover:opacity-90 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition shadow-md shadow-sky-500/20"
+        >
+          पूछें
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // -------------------------------------------------------------
+    // 1. सुपरनोवा 3D अवतार विजुअल इंजन (Canvas Realistic Blendshapes)
+    // -------------------------------------------------------------
+    const canvas = document.getElementById("avatarCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let isSpeaking = false;
+    let mouthOpen = 0;       // विज़िम ओपन (0 to 1)
+    let mouthWidth = 1;      // विज़िम चौड़ाई (गोल या चौड़ा)
+    let eyeBlink = 0;        // पलक झपकना
+    let breathOffset = 0;
+
+    // अवतार रेंडर लूप (60 FPS सुपर स्मूथ)
+    function renderAvatar() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2 + Math.sin(breathOffset) * 3;
+
+      // 1. चेहरा बेस (Face Base)
+      const grad = ctx.createRadialGradient(cx, cy - 20, 20, cx, cy, 90);
+      grad.addColorStop(0, "#fde047");
+      grad.addColorStop(0.4, "#fbbf24");
+      grad.addColorStop(1, "#b45309");
+
+      // सिर का आकार
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 10, 68, 80, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#1e293b";
+      ctx.fill();
+      ctx.restore();
+
+      // आंतरिक सजीव मुखौटा (Stylized 3D Avatar Head)
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 5, 62, 74, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#334155";
+      ctx.shadowColor = "#38bdf8";
+      ctx.shadowBlur = isSpeaking ? 15 : 5;
+      ctx.fill();
+      ctx.restore();
+
+      // 2. आँखें और पलकें (Blinking Eyes)
+      const eyeY = cy - 20;
+      const leftEyeX = cx - 22;
+      const rightEyeX = cx + 22;
+      const eyeH = Math.max(1, 8 * (1 - eyeBlink));
+
+      ctx.fillStyle = "#38bdf8";
+      // बाईं आँख
+      ctx.beginPath();
+      ctx.ellipse(leftEyeX, eyeY, 6, eyeH, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // दाईं आँख
+      ctx.beginPath();
+      ctx.ellipse(rightEyeX, eyeY, 6, eyeH, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3. बायोमेट्रिक लिप-सिंक मुँह (Dynamic Lip Blendshapes)
+      const mouthY = cy + 28;
+      const mOpen = isSpeaking ? mouthOpen * 14 : 2;
+      const mW = 16 * mouthWidth;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, mouthY, mW, Math.max(2, mOpen), 0, 0, Math.PI * 2);
+      ctx.fillStyle = isSpeaking ? "#f43f5e" : "#64748b";
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#fda4af";
+      ctx.stroke();
+      ctx.restore();
+
+      // सांस और पलक एनिमेशन अपडेट
+      breathOffset += 0.04;
+      if (Math.random() < 0.015 && eyeBlink === 0) {
+        triggerBlink();
+      }
+
+      requestAnimationFrame(renderAvatar);
+    }
+
+    function triggerBlink() {
+      eyeBlink = 1;
+      setTimeout(() => { eyeBlink = 0; }, 160);
+    }
+
+    renderAvatar();
+
+    // -------------------------------------------------------------
+    // 2. रीयल-टाइम आवाज़ और ऑडियो सिंथेसाइज़र (Speech & Viseme Sync)
+    // -------------------------------------------------------------
+    const synth = window.speechSynthesis;
+    let recognition = null;
+
+    // माइक्रोफ़ोन सेटअप (Web Speech Recognition)
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = 'hi-IN';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        document.getElementById("userInput").value = text;
+        handleSend();
+      };
+
+      recognition.onend = () => {
+        document.getElementById("micBtn").classList.remove("bg-rose-600");
+      };
+    }
+
+    function toggleListening() {
+      if (!recognition) {
+        alert("आपके ब्राउज़र में वॉइस इनपुट सपोर्ट नहीं है। कृपया लिखकर पूछें।");
+        return;
+      }
+      try {
+        recognition.start();
+        document.getElementById("micBtn").classList.add("bg-rose-600");
+        document.getElementById("statusBadge").innerText = "🎙️ सुन रही हूँ...";
+      } catch (e) {
+        recognition.stop();
+      }
+    }
+
+    // सुपरनोवा लिप-सिंक आवाज़ फंक्शन
+    function speakText(cleanText) {
+      if (!synth) return;
+      synth.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = "hi-IN";
+      utterance.rate = 1.05; // सुपरनोवा की तरह नेचुरल स्पीड
+      utterance.pitch = 1.1; // मधुर और आत्मीय टोन
+
+      // हिंदी वॉइस ढूँढना
+      const voices = synth.getVoices();
+      const hindiVoice = voices.find(v => v.lang.includes("hi") || v.lang.includes("HI"));
+      if (hindiVoice) utterance.voice = hindiVoice;
+
+      let lipInterval = null;
+
+      utterance.onstart = () => {
+        isSpeaking = true;
+        document.getElementById("statusBadge").innerText = "🗣️ बोल रही हूँ...";
+        document.getElementById("voiceRing").classList.remove("opacity-0");
+
+        // विज़िम सिमुलेटर (आवाज़ के साथ जबड़ा और मुँह खोलना)
+        lipInterval = setInterval(() => {
+          mouthOpen = Math.random() * 0.9 + 0.1;
+          mouthWidth = Math.random() * 0.4 + 0.8;
+        }, 80);
+      };
+
+      utterance.onend = () => {
+        isSpeaking = false;
+        clearInterval(lipInterval);
+        mouthOpen = 0;
+        mouthWidth = 1;
+        document.getElementById("statusBadge").innerText = "🟢 सक्रिय और तैयार";
+        document.getElementById("voiceRing").classList.add("opacity-0");
+      };
+
+      utterance.onerror = () => {
+        isSpeaking = false;
+        clearInterval(lipInterval);
+      };
+
+      synth.speak(utterance);
+    }
+
+    // -------------------------------------------------------------
+    // 3. बैकएंड API कॉल (FastAPI Connection)
+    // -------------------------------------------------------------
+    async function handleSend() {
+      const inputEl = document.getElementById("userInput");
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      inputEl.value = "";
+      document.getElementById("statusBadge").innerText = "⚡ विचार कर रही हूँ...";
+      
+      const subBox = document.getElementById("subtitleBox");
+      subBox.innerHTML = `<p class="text-sky-400 font-semibold">आप: ${text}</p><p class="text-slate-400 animate-pulse mt-1">खुशी सोच रही है...</p>`;
+
+      try {
+        // हमारे स्टेप 1 वाले FastAPI बैकएंड को कॉल
+        const response = await fetch("/api/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: "customer_1",
+            message: text
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        subBox.innerHTML = `
+          <p class="text-sky-400 font-semibold mb-1">आप: ${text}</p>
+          <p class="text-slate-100">${data.reply}</p>
+        `;
+
+        // सुपरनोवा की तरह तुरंत बोलना और लिप-सिंक करना
+        speakText(data.voice_text || data.reply);
+
+      } catch (err) {
+        console.error("API Connection Error:", err);
+        subBox.innerHTML += `<p class="text-rose-400 mt-2">⚠️ सर्वर से कनेक्ट नहीं हो सका (${err.message})। सुनिश्चित करें कि main.py चल रहा है।</p>`;
+        document.getElementById("statusBadge").innerText = "🔴 कनेक्शन एरर";
+      }
+    }
+
+    async function clearChat() {
+      try {
+        await fetch("/api/clear?user_id=customer_1", { method: "POST" });
+        document.getElementById("subtitleBox").innerHTML = "<p class='text-slate-400 italic'>मेमोरी साफ़ कर दी गई है। नया सवाल पूछें।</p>";
+      } catch (e) {}
+    }
+
+    // -------------------------------------------------------------
+    // 4. PWA (Add to Home Screen - एक क्लिक में ऐप डाउनलोड)
+    // -------------------------------------------------------------
+    let deferredPrompt;
+    const installBtn = document.getElementById("installBtn");
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.classList.remove("hidden");
+    });
+
+    installBtn.addEventListener("click", async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        installBtn.classList.add("hidden");
+      }
+      deferredPrompt = null;
+    });
+  </script>
+</body>
+  </html>
+
