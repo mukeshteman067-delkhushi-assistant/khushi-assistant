@@ -1,16 +1,16 @@
+import os
+import json
+from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List
-import os, json, base64, io
-from datetime import datetime, timezone, timedelta
-from PIL import Image
 from google import genai
 from google.genai import types
 
-app = FastAPI(title="Khushi AI Core Engine")
+# 1. FastAPI ऐप इनिशियलाइज़ेशन
+app = FastAPI(title="Khushi AI Core Brain", version="2.0")
 
-# CORS सक्षम करना (ताकि फ्रंटएंड बिना किसी रुकावट के कनेक्ट हो सके)
+# CORS सक्षम करें (ब्राउज़र / मोबाइल ऐप से बिना रुकावट कनेक्शन के लिए)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,115 +19,112 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1. Gemini Client सेटअप
+# 2. Gemini क्लाइंट और मास्टर पर्सोना
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
-MEMORY_FILE = "khushi_memory.json"
+MASTER_PERSONA = """तुम 'Khushi' हो - एक अत्यंत बुद्धिमान, परिपक्व, ज्ञानी और आत्मीय AI साथी।
+नियम:
+1. तुम्हारे पास विज्ञान, इतिहास, तकनीक, कानून, व्यापार और जीवन के सभी विषयों का गहरा ज्ञान है।
+2. जब भी कोई सवाल पूछा जाए, तो बिल्कुल सटीक, तथ्यपरक (100% Factually Correct) और व्यावहारिक उत्तर दो।
+3. उत्तर बहुत लंबा और उबाऊ न हो; सटीक, ऊर्जावान और आत्मीय भाषा (शुद्ध हिंदी) में हो।
+4. यदि किसी ताज़ा घटना या सटीक तथ्य की बात हो, तो Google Search के नवीनतम डेटा के आधार पर ही बोलो।"""
 
-def get_ist_time():
-    return datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%I:%M %p, %d %b %Y")
+# 3. डेटा स्कीमा
+class UserMessage(BaseModel):
+    user_id: str = "guest_user"
+    message: str
+    stream: bool = False
 
-PERSONA = f"""तुम 'Khushi' हो - सामने बैठे इंसान को गहराई से महसूस करने वाली, उच्च-बुद्धिमान, हमदर्द और सजीव AI साथी।
-समय (IST): {get_ist_time()}।
-जब भी तुम्हें कैमरा विज़न या चैट से यूज़र दिखे, तो उसके हाव-भाव, काम या माहौल को समझकर 2 पंक्तियों में सजीव, आत्मीय और संक्षिप्त हिंदी में बोलो।"""
-
-# 2. मेमोरी लोड / सेव फंक्शन
-def load_memory() -> List[dict]:
-    if os.path.exists(MEMORY_FILE):
-        try:
-            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return []
-    return []
-
-def save_memory(messages: List[dict]):
-    try:
-        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(messages, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
-
-# 3. डेटा मॉडल्स (Request / Response)
-class ChatRequest(BaseModel):
-    message: Optional[str] = None
-    image_base64: Optional[str] = None
-
-class ChatResponse(BaseModel):
+class AssistantResponse(BaseModel):
     reply: str
-    history: List[dict]
+    sources: Optional[List[str]] = []
+    status: str = "success"
 
-# 4. API एंडपॉइंट्स
+# 4. इन-मेमोरी चैट हिस्ट्री (यूज़र के हिसाब से अलग-अलग)
+user_sessions = {}
 
-@app.get("/")
-def home():
-    return {"status": "online", "model": "gemini-3.6-flash", "assistant": "Khushi"}
-
-@app.get("/api/history")
-def get_history():
-    """पूरी चैट हिस्ट्री लोड करने के लिए"""
-    return {"history": load_memory()}
-
-@app.post("/api/clear")
-def clear_history():
-    """मेमोरी साफ़ करने के लिए"""
-    save_memory([])
-    return {"status": "cleared", "history": []}
-
-@app.post("/api/chat", response_model=ChatResponse)
-async def chat_endpoint(req: ChatRequest):
-    """टेक्स्ट संवाद एवं स्वायत्त कैमरा विज़न प्रोसेसिंग"""
+# 5. मुख्य AI एंडपॉइंट (Google Search Grounding के साथ)
+@app.post("/api/ask", response_model=AssistantResponse)
+async def ask_assistant(payload: UserMessage):
     if not client:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY कॉन्फ़िगर नहीं है।")
 
-    contents = []
-    user_label = req.message or "[कैमरे से लाइव देखा]"
+    user_id = payload.user_id
+    query = payload.message.strip()
 
-    # यदि कैमरे का लाइव फ्रेम आया है
-    if req.image_base64:
-        try:
-            clean_b64 = req.image_base64.split(",")[-1]
-            img_bytes = base64.b64decode(clean_b64)
-            pil_img = Image.open(io.BytesIO(img_bytes))
-            contents.append(pil_img)
-            if not req.message:
-                contents.append("कैमरे में देखकर बताओ यूजर क्या कर रहा है या उसका मूड और माहौल कैसा है? अगर कुछ खास या नया दिखे तो 1 छोटा हमदर्द सवाल पूछो या बात शुरू करो।")
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"इमेज डिकोडिंग में त्रुटि: {str(e)}")
+    if not query:
+        raise HTTPException(status_code=400, detail="सवाल खाली नहीं हो सकता।")
 
-    if req.message:
-        contents.append(req.message)
+    # यूज़र की पुरानी हिस्ट्री बनाए रखना
+    if user_id not in user_sessions:
+        user_sessions[user_id] = []
 
-    # Gemini 3.6 Flash (Fallback 1.5 Flash)
-    reply_text = ""
-    models_to_try = ['gemini-3.6-flash', 'gemini-1.5-flash']
+    # संदर्भ (Context) जोड़ना
+    user_sessions[user_id].append({"role": "user", "parts": [{"text": query}]})
     
-    for m in models_to_try:
-        try:
-            res = client.models.generate_content(
-                model=m,
-                contents=contents,
-                config=types.GenerateContentConfig(system_instruction=PERSONA)
+    # मेमोरी लिमिट: आख़िरी 10 बातचीत सुरक्षित रखें ताकि गति तेज़ बनी रहे
+    if len(user_sessions[user_id]) > 10:
+        user_sessions[user_id] = user_sessions[user_id][-10:]
+
+    try:
+        # Google Search Grounding टूल सक्रिय करें
+        config = types.GenerateContentConfig(
+            system_instruction=MASTER_PERSONA,
+            tools=[{"google_search": {}}],  # गूगल लाइव सर्च ऑन
+            temperature=0.7,
+        )
+
+        # सुपरफ़ास्ट Gemini 2.5 Flash मॉडल को कॉल
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=query,
+            config=config,
+        )
+
+        reply_text = response.text if response and response.text else "मुझे इसका उत्तर ढूँढने में थोड़ी कठिनाई हो रही है, कृपया दोबारा पूछें।"
+
+        # अगर गूगल सर्च से जानकारी मिली है तो स्रोतों की जानकारी
+        sources = []
+        if response.candidates and response.candidates[0].grounding_metadata:
+            grounding_chunks = getattr(response.candidates[0].grounding_metadata, 'grounding_chunks', [])
+            if grounding_chunks:
+                for chunk in grounding_chunks:
+                    web = getattr(chunk, 'web', None)
+                    if web and getattr(web, 'uri', None):
+                        sources.append(web.uri)
+
+        # हिस्ट्री में जवाब सुरक्षित करें
+        user_sessions[user_id].append({"role": "model", "parts": [{"text": reply_text}]})
+
+        return AssistantResponse(
+            reply=reply_text,
+            sources=list(set(sources))[:3],  # टॉप 3 स्रोत
+            status="success"
+        )
+
+    except Exception as e:
+        error_msg = str(e)
+        if "429" in error_msg:
+            return AssistantResponse(
+                reply="सर्वर पर अभी बहुत अधिक ट्रैफ़िक है, कृपया 10 सेकंड बाद पुनः प्रयास करें।",
+                status="rate_limited"
             )
-            if res and res.text:
-                reply_text = res.text.strip()
-                break
-        except Exception:
-            continue
+        return AssistantResponse(
+            reply=f"तकनीकी समस्या: {error_msg[:100]}",
+            status="error"
+        )
 
-    if not reply_text:
-        reply_text = "माफ़ कीजिए, मैं अभी थोड़ा व्यस्त हूँ। कृपया कुछ सेकंड बाद पुनः बोलें।"
-
-    # मेमोरी में सुरक्षित जोड़ना
-    history = load_memory()
-    history.append({"role": "user", "content": user_label})
-    history.append({"role": "assistant", "content": reply_text})
-    save_memory(history)
-
-    return ChatResponse(reply=reply_text, history=history)
+# 6. हेल्थ चेक रूट (यह जांचने के लिए कि सर्वर ज़िंदा है या नहीं)
+@app.get("/")
+def health_check():
+    return {
+        "engine": "Khushi AI High-Speed Brain",
+        "search_grounding": "Active",
+        "status": "Ready for Commercial PWA"
+    }
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-      
+                
