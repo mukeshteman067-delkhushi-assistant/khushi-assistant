@@ -99,9 +99,9 @@ async def chat_endpoint(req: ChatRequest):
     if req.message:
         contents.append(req.message)
 
-    # Gemini 3.6 Flash (Fallback 2.5 Flash)
+    # Gemini 3.6 Flash (Fallback 1.5 Flash)
     reply_text = ""
-    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash']
+    models_to_try = ['gemini-3.6-flash', 'gemini-1.5-flash']
     
     for m in models_to_try:
         try:
