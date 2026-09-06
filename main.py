@@ -6,6 +6,7 @@ import io
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from PIL import Image
 from google import genai
@@ -14,7 +15,7 @@ from google.genai import types
 # 1. FastAPI ऐप इनिशियलाइज़ेशन
 app = FastAPI(title="Khushi AI Core Brain", version="2.0")
 
-# CORS सक्षम करें (मोबाइल PWA, वेब ब्राउज़र और प्ले स्टोर वेबव्यू के लिए)
+# CORS सक्षम करें (मोबाइल PWA, वेब ब्राउज़र और वेबव्यू के लिए)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -94,14 +95,14 @@ async def ask_assistant(payload: UserMessage):
     # इनपुट तैयार करना (मल्टीमॉडल सपोर्ट)
     current_contents = []
     
-    # अगर यूजर की पुरानी बातचीत है तो संदर्भ बनाए रखें
-    for turn in user_sessions[user_id][-6:]:  # आखिरी 6 टर्न स्पीड बनाए रखने के लिए
+    # पुरानी बातचीत संदर्भ में जोड़ना (स्पीड बनाए रखने के लिए अंतिम 6 टर्न)
+    for turn in user_sessions[user_id][-6:]:
         current_contents.append(types.Content(
             role=turn["role"],
             parts=[types.Part.from_text(text=turn["text"])]
         ))
 
-    # नया इनपुट जोड़ें
+    # नया इनपुट जोड़ना
     new_parts = []
     if img_b64:
         try:
@@ -123,7 +124,7 @@ async def ask_assistant(payload: UserMessage):
     ))
 
     try:
-        # Google Search Grounding चालू
+        # Google Search Grounding टूल सक्रिय
         config = types.GenerateContentConfig(
             system_instruction=MASTER_PERSONA,
             tools=[{"google_search": {}}],
@@ -138,7 +139,7 @@ async def ask_assistant(payload: UserMessage):
 
         reply_text = response.text if response and response.text else "मुझे इसका उत्तर ढूँढने में थोड़ी कठिनाई हो रही है, कृपया दोबारा पूछें।"
 
-        # वेब सर्च के स्रोत निकालना
+        # वेब सर्च के स्रोत सुरक्षित करना
         sources = []
         if response.candidates and response.candidates[0].grounding_metadata:
             grounding_chunks = getattr(response.candidates[0].grounding_metadata, 'grounding_chunks', [])
@@ -184,9 +185,11 @@ def clear_user_history(user_id: str = "guest_user"):
         save_memory()
     return {"status": "cleared"}
 
-# 7. सर्वर स्टेटस
+# 7. होम राउट: PWA फ्रंटएंड (index.html) सर्व करना
 @app.get("/")
-def health_check():
+def serve_home():
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
     return {
         "assistant": "Khushi AI",
         "engine": "Gemini 2.5 Flash + Google Grounding",
@@ -197,4 +200,4 @@ def health_check():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-            
+    
